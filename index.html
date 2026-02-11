@@ -1,234 +1,488 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stroy WebApp</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{
-      --bg:#0f172a; --card:#111c36; --muted:#94a3b8; --text:#e5e7eb;
-      --line:rgba(148,163,184,.18); --btn:#3b82f6; --btn2:#1f2a4a;
-      --danger:#ef4444;
+      --bg:#0b1220; --card:#0f1a33; --muted:#93a4c7; --text:#eaf0ff;
+      --line:rgba(255,255,255,.08);
+      --btn:#2f6bff; --btn2:#1d2a4a; --danger:#ff5252;
+      --shadow: 0 12px 30px rgba(0,0,0,.35);
+      --radius:18px;
     }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    .wrap{max-width:720px;margin:0 auto;padding:14px 14px 90px}
-    h1{font-size:18px;margin:4px 0 10px;text-align:center}
-    .sub{color:var(--muted);font-size:12px;text-align:center;margin-bottom:12px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin:10px 0}
-    label{display:block;color:var(--muted);font-size:12px;margin:0 0 6px}
-    select,input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1328;color:var(--text);outline:none}
-    .row{display:flex;gap:10px}
-    .row > *{flex:1}
-    .btn{display:inline-flex;align-items:center;justify-content:center;width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--btn);color:white;font-weight:600;cursor:pointer}
-    .btn.secondary{background:var(--btn2);color:var(--text)}
-    .btn.danger{background:transparent;color:var(--danger);border-color:rgba(239,68,68,.35)}
-    .list{margin-top:10px;border-top:1px solid var(--line)}
-    .item{padding:10px 6px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center}
-    .item .name{flex:1}
-    .item small{color:var(--muted)}
-    .pill{font-size:11px;color:var(--muted);border:1px solid var(--line);padding:4px 8px;border-radius:999px}
-    .hint{color:var(--muted);font-size:12px;margin-top:8px;line-height:1.4}
-    .status{font-size:12px;color:var(--muted);margin-top:8px}
-    .footerbar{position:fixed;left:0;right:0;bottom:0;padding:10px 14px;background:rgba(15,23,42,.9);backdrop-filter:blur(10px);border-top:1px solid var(--line)}
-    .footerbar .btn{max-width:720px;margin:0 auto;display:flex}
+    *{box-sizing:border-box;}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg); color:var(--text);
+      padding:18px;
+    }
+    .wrap{max-width:760px;margin:0 auto;}
+    h1{margin:0 0 8px;text-align:center;font-size:26px;}
+    .sub{margin:0 0 18px;text-align:center;color:var(--muted);font-size:13px;}
+    .card{
+      background:var(--card); border:1px solid var(--line);
+      border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);
+      margin:12px 0;
+    }
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media (max-width:720px){.grid{grid-template-columns:1fr;}}
+    label{display:block;margin:0 0 6px;color:var(--muted);font-size:12px;}
+    input, select, textarea{
+      width:100%; padding:12px 12px; border-radius:14px;
+      border:1px solid var(--line); background:#0b1630; color:var(--text);
+      outline:none;
+    }
+    textarea{min-height:86px; resize:vertical;}
+    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
+    .row > *{flex:1;}
+    .btn{
+      padding:12px 14px; border-radius:14px; border:0;
+      cursor:pointer; color:white; font-weight:600;
+    }
+    .btn.primary{background:var(--btn);}
+    .btn.secondary{background:var(--btn2); color:var(--text);}
+    .btn.danger{background:transparent;border:1px solid rgba(255,82,82,.5);color:#ff9a9a;}
+    .status{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px;}
+    .list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+    .item{
+      border:1px solid var(--line); border-radius:14px; padding:10px 12px;
+      display:flex; justify-content:space-between; gap:10px; align-items:center;
+      background:#0b1630;
+    }
+    .item .meta{color:var(--muted);font-size:12px;}
+    .item .name{font-weight:650;}
+    .pill{
+      padding:6px 10px; border-radius:999px; border:1px solid var(--line);
+      color:var(--muted); font-size:12px;
+    }
+
+    /* dropdown */
+    .ac-wrap{position:relative;}
+    .dropdown{
+      position:absolute; left:0; right:0; top:100%;
+      background:#071027; border:1px solid var(--line);
+      border-radius:14px; margin-top:6px; max-height:260px; overflow:auto;
+      box-shadow:var(--shadow); z-index:20; display:none;
+    }
+    .dropdown.show{display:block;}
+    .dd-item{
+      padding:10px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .dd-item:last-child{border-bottom:0;}
+    .dd-item:hover{background:rgba(47,107,255,.12);}
+    .dd-title{font-weight:650;}
+    .dd-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+    .footerBtn{
+      margin-top:14px;
+      width:100%;
+      padding:14px 16px;
+      border-radius:16px;
+      background:transparent;
+      border:1px solid rgba(255,82,82,.35);
+      color:#ff8080;
+      font-weight:700;
+      cursor:pointer;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Stroy WebApp</h1>
-    <div class="sub">Выбери менеджера → подгрузим его контрагентов из МойСклад</div>
+<div class="wrap">
+  <h1>Stroy WebApp</h1>
+  <p class="sub">Заявка в МойСклад → отправка в группы</p>
 
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Менеджер</label>
-          <select id="manager">
-            <option value="">— выбери —</option>
-            <option value="булат">Булат</option>
-            <option value="магомед">Магомед</option>
-            <option value="амир">Амир</option>
-            <option value="шамиль">Шамиль</option>
-          </select>
-        </div>
-        <div>
-          <label>Поиск контрагента</label>
-          <input id="cpSearch" placeholder="например: темерлан / рынок / ооо" />
-        </div>
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label>Менеджер</label>
+        <select id="manager">
+          <option value="булат">Булат</option>
+          <option value="магомед">Магомед</option>
+          <option value="амир">Амир</option>
+          <option value="шамиль">Шамиль</option>
+        </select>
       </div>
-
-      <div style="margin-top:10px" class="row">
-        <button class="btn" id="btnLoadCp">Загрузить контрагентов</button>
-        <button class="btn secondary" id="btnClear">Очистить</button>
-      </div>
-
-      <div class="status" id="cpStatus">Готово.</div>
-      <div class="list" id="cpList"></div>
-
-      <div class="hint">
-        Логика: WebApp запрашивает <span class="pill">/ms/counterparties?manager=...</span><br/>
-        У каждого контрагента в МойСклад должен быть тег (булат/магомед/амир/шамиль).
+      <div>
+        <label>Дата заявки</label>
+        <input id="orderDate" type="date">
       </div>
     </div>
 
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Товары (номенклатура) — поиск</label>
-          <input id="prodSearch" placeholder="например: гипс / профиль / клей" />
-        </div>
-        <div style="align-self:end">
-          <button class="btn secondary" id="btnLoadProd">Загрузить товары</button>
-        </div>
+    <div style="height:10px"></div>
+
+    <div class="grid">
+      <div class="ac-wrap">
+        <label>Контрагент</label>
+        <input id="cpInput" placeholder="Начни вводить имя контрагента..." autocomplete="off">
+        <div id="cpDD" class="dropdown"></div>
+        <div class="status" id="cpStatus">Контрагенты ещё не загружены.</div>
       </div>
-      <div class="status" id="prodStatus">Товары ещё не загружены.</div>
-      <div class="list" id="prodList"></div>
-      <div class="hint">
-        Запрос: <span class="pill">/ms/products?limit=...</span> и если есть поиск — фильтруем по name~search
+
+      <div>
+        <label>Действия</label>
+        <div class="row">
+          <button class="btn secondary" id="btnLoadCP" type="button">Загрузить контрагентов</button>
+          <button class="btn secondary" id="btnClear" type="button">Очистить</button>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="footerbar">
-    <button class="btn danger" id="btnClose">Закрыть WebApp</button>
+  <div class="card">
+    <div class="grid">
+      <div class="ac-wrap">
+        <label>Товар</label>
+        <input id="prodInput" placeholder="Начни вводить товар..." autocomplete="off">
+        <div id="prodDD" class="dropdown"></div>
+        <div class="status" id="prodStatus">Товары ещё не загружены.</div>
+      </div>
+      <div>
+        <label>Количество</label>
+        <input id="qtyInput" type="number" step="0.01" min="0" placeholder="например: 10">
+      </div>
+    </div>
+
+    <div style="height:10px"></div>
+
+    <div class="row">
+      <button class="btn secondary" id="btnLoadProd" type="button">Загрузить товары</button>
+      <button class="btn primary" id="btnAddItem" type="button">Добавить товар</button>
+    </div>
+
+    <div class="list" id="itemsList"></div>
   </div>
+
+  <div class="card">
+    <label>Комментарий (необязательно)</label>
+    <textarea id="note" placeholder="Например: доставка утром / самовывоз / срочно"></textarea>
+
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <button class="btn primary" id="btnSendOrder" type="button">Отправить заявку</button>
+      <button class="btn secondary" id="btnSendToTg" type="button">Отправить в Telegram (sendData)</button>
+    </div>
+    <div class="status" id="sendStatus"></div>
+  </div>
+
+  <button class="footerBtn" type="button" id="btnClose">Закрыть WebApp</button>
+</div>
 
 <script>
-(() => {
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.expand();
-    tg.ready();
-  }
-
   const API_BASE = "https://api.stroybote.ru";
 
-  const $ = (id) => document.getElementById(id);
-
-  const managerEl = $("manager");
-  const cpSearchEl = $("cpSearch");
-  const cpStatusEl = $("cpStatus");
-  const cpListEl = $("cpList");
-
-  const prodSearchEl = $("prodSearch");
-  const prodStatusEl = $("prodStatus");
-  const prodListEl = $("prodList");
-
-  function setStatus(el, msg) { el.textContent = msg; }
-
-  function escapeHtml(s) {
-    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
   }
 
-  async function apiGet(path, params = {}) {
-    const url = new URL(API_BASE + path);
-    Object.entries(params).forEach(([k,v]) => {
-      if (v !== undefined && v !== null && String(v).trim() !== "") url.searchParams.set(k, v);
-    });
+  // ====== state ======
+  let counterparties = []; // {id,name,tags[]}
+  let products = [];       // {id,name,article}
+  let selectedCP = null;   // {id,name,...}
+  let selectedProd = null; // {id,name,...}
+  let items = [];          // {product_id, product_name, qty}
 
-    const res = await fetch(url.toString(), { method: "GET" });
-    if (!res.ok) {
-      const text = await res.text().catch(()=> "");
-      throw new Error(`HTTP ${res.status}: ${text.slice(0,300)}`);
+  // ====== helpers ======
+  const $ = (id)=>document.getElementById(id);
+  function setStatus(id, text){ $(id).textContent = text || ""; }
+
+  function todayISO(){
+    const d = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
+  }
+
+  async function fetchJSON(url){
+    const r = await fetch(url, { method:"GET" });
+    if (!r.ok) {
+      const t = await r.text().catch(()=> "");
+      throw new Error(`HTTP ${r.status}: ${t.slice(0,200)}`);
     }
-    return res.json();
+    return r.json();
   }
 
-  function renderCounterparties(rows) {
-    cpListEl.innerHTML = "";
-    if (!rows || !rows.length) {
-      cpListEl.innerHTML = `<div class="item"><div class="name">Пусто</div><small>нет контрагентов</small></div>`;
+  function showDropdown(ddEl, rows, onPick){
+    ddEl.innerHTML = "";
+    if (!rows.length){ ddEl.classList.remove("show"); return; }
+
+    for (const row of rows) {
+      const div = document.createElement("div");
+      div.className = "dd-item";
+      div.innerHTML = `
+        <div class="dd-title">${escapeHtml(row.name)}</div>
+        ${row.tags ? `<div class="dd-sub">теги: ${escapeHtml((row.tags||[]).join(", "))}</div>` : ""}
+      `;
+      div.addEventListener("click", ()=> onPick(row));
+      ddEl.appendChild(div);
+    }
+    ddEl.classList.add("show");
+  }
+
+  function hideDropdown(ddEl){ ddEl.classList.remove("show"); }
+
+  // ====== load counterparties (by manager tag) ======
+  async function loadCounterparties(){
+    const manager = $("manager").value;
+    setStatus("cpStatus", "Загружаю контрагентов...");
+    selectedCP = null;
+    $("cpInput").value = "";
+
+    // твой API ожидает manager=
+    const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(manager)}&limit=1000`;
+    const data = await fetchJSON(url);
+    counterparties = data.rows || [];
+    setStatus("cpStatus", `Загружено контрагентов: ${counterparties.length}`);
+  }
+
+  // ====== load ALL products via pagination ======
+  async function loadAllProducts(){
+    setStatus("prodStatus", "Загружаю товары (все страницы)...");
+    products = [];
+    selectedProd = null;
+    $("prodInput").value = "";
+
+    const limit = 100;
+    let offset = 0;
+
+    while (true){
+      const url = `${API_BASE}/ms/products?limit=${limit}&offset=${offset}`;
+      const data = await fetchJSON(url);
+      const rows = data.rows || [];
+      products.push(...rows);
+      if (rows.length < limit) break;
+      offset += limit;
+      if (products.length > 5000) break; // защита на всякий
+    }
+
+    setStatus("prodStatus", `Загружено товаров: ${products.length}`);
+  }
+
+  // ====== render items list ======
+  function renderItems(){
+    const list = $("itemsList");
+    list.innerHTML = "";
+    if (!items.length){
+      const p = document.createElement("div");
+      p.className = "status";
+      p.textContent = "Список товаров пуст.";
+      list.appendChild(p);
       return;
     }
-    for (const r of rows) {
-      cpListEl.insertAdjacentHTML("beforeend", `
-        <div class="item">
-          <div class="name">${escapeHtml(r.name)}</div>
-          <div class="pill">${escapeHtml((r.tags||[]).join(", "))}</div>
+
+    items.forEach((it, idx)=>{
+      const div = document.createElement("div");
+      div.className = "item";
+      div.innerHTML = `
+        <div>
+          <div class="name">${escapeHtml(it.product_name)}</div>
+          <div class="meta">кол-во: ${it.qty}</div>
         </div>
-      `);
-    }
+        <button class="btn danger" type="button" data-idx="${idx}">Удалить</button>
+      `;
+      div.querySelector("button").addEventListener("click", ()=>{
+        items.splice(idx,1);
+        renderItems();
+      });
+      list.appendChild(div);
+    });
   }
 
-  function renderProducts(rows) {
-    prodListEl.innerHTML = "";
-    if (!rows || !rows.length) {
-      prodListEl.innerHTML = `<div class="item"><div class="name">Пусто</div><small>нет товаров</small></div>`;
+  // ====== autocomplete: counterparties ======
+  function filterCP(q){
+    q = (q||"").trim().toLowerCase();
+    if (!q) return counterparties.slice(0, 30);
+    const res = counterparties.filter(x => (x.name||"").toLowerCase().includes(q));
+    return res.slice(0, 30);
+  }
+
+  $("cpInput").addEventListener("input", ()=>{
+    const dd = $("cpDD");
+    const rows = filterCP($("cpInput").value);
+    showDropdown(dd, rows, (row)=>{
+      selectedCP = row;
+      $("cpInput").value = row.name;
+      hideDropdown(dd);
+      setStatus("cpStatus", `Выбран: ${row.name}`);
+    });
+  });
+
+  $("cpInput").addEventListener("focus", ()=>{
+    if (!counterparties.length) return;
+    const dd = $("cpDD");
+    const rows = filterCP($("cpInput").value);
+    showDropdown(dd, rows, (row)=>{
+      selectedCP = row;
+      $("cpInput").value = row.name;
+      hideDropdown(dd);
+      setStatus("cpStatus", `Выбран: ${row.name}`);
+    });
+  });
+
+  // ====== autocomplete: products ======
+  function filterProd(q){
+    q = (q||"").trim().toLowerCase();
+    if (!q) return products.slice(0, 30);
+    const res = products.filter(x => (x.name||"").toLowerCase().includes(q));
+    return res.slice(0, 30);
+  }
+
+  $("prodInput").addEventListener("input", ()=>{
+    const dd = $("prodDD");
+    const rows = filterProd($("prodInput").value);
+    showDropdown(dd, rows, (row)=>{
+      selectedProd = row;
+      $("prodInput").value = row.name;
+      hideDropdown(dd);
+      setStatus("prodStatus", `Выбран товар: ${row.name}`);
+    });
+  });
+
+  $("prodInput").addEventListener("focus", ()=>{
+    if (!products.length) return;
+    const dd = $("prodDD");
+    const rows = filterProd($("prodInput").value);
+    showDropdown(dd, rows, (row)=>{
+      selectedProd = row;
+      $("prodInput").value = row.name;
+      hideDropdown(dd);
+      setStatus("prodStatus", `Выбран товар: ${row.name}`);
+    });
+  });
+
+  // hide dropdown on outside click
+  document.addEventListener("click", (e)=>{
+    const cpWrap = $("cpInput").closest(".ac-wrap");
+    const prWrap = $("prodInput").closest(".ac-wrap");
+    if (cpWrap && !cpWrap.contains(e.target)) hideDropdown($("cpDD"));
+    if (prWrap && !prWrap.contains(e.target)) hideDropdown($("prodDD"));
+  });
+
+  // ====== actions ======
+  $("btnLoadCP").addEventListener("click", async ()=>{
+    try{ await loadCounterparties(); }
+    catch(e){ setStatus("cpStatus", "Ошибка: " + e.message); }
+  });
+
+  $("btnLoadProd").addEventListener("click", async ()=>{
+    try{ await loadAllProducts(); }
+    catch(e){ setStatus("prodStatus", "Ошибка: " + e.message); }
+  });
+
+  $("btnAddItem").addEventListener("click", ()=>{
+    const qty = Number($("qtyInput").value);
+    if (!selectedProd){
+      setStatus("prodStatus", "Выбери товар из списка (кликни по выпадающему).");
       return;
     }
-    for (const r of rows) {
-      prodListEl.insertAdjacentHTML("beforeend", `
-        <div class="item">
-          <div class="name">${escapeHtml(r.name)}</div>
-          <small>${escapeHtml(r.article || "")}</small>
-        </div>
-      `);
-    }
-  }
-
-  async function loadCounterparties() {
-    const manager = managerEl.value.trim();
-    if (!manager) {
-      setStatus(cpStatusEl, "Выбери менеджера.");
+    if (!qty || qty <= 0){
+      setStatus("prodStatus", "Укажи количество (> 0).");
       return;
     }
-    setStatus(cpStatusEl, "Загружаю контрагентов...");
-    cpListEl.innerHTML = "";
 
-    const search = cpSearchEl.value.trim();
-    const data = await apiGet("/ms/counterparties", {
-      manager,
-      limit: 200,     // можно 1000, но лучше не грузить всё сразу
-      search: search || ""
+    items.push({
+      product_id: selectedProd.id,
+      product_name: selectedProd.name,
+      qty: qty
     });
 
-    renderCounterparties(data.rows || []);
-    setStatus(cpStatusEl, `Готово: ${data.rows?.length || 0} шт.`);
-  }
+    $("qtyInput").value = "";
+    $("prodInput").value = "";
+    selectedProd = null;
 
-  async function loadProducts() {
-    setStatus(prodStatusEl, "Загружаю товары...");
-    prodListEl.innerHTML = "";
-
-    const search = prodSearchEl.value.trim();
-    const data = await apiGet("/ms/products", {
-      limit: 50,
-      search: search || ""
-    });
-
-    renderProducts(data.rows || []);
-    setStatus(prodStatusEl, `Готово: ${data.rows?.length || 0} шт.`);
-  }
-
-  $("btnLoadCp").addEventListener("click", async () => {
-    try { await loadCounterparties(); }
-    catch (e) { setStatus(cpStatusEl, "Ошибка: " + e.message); }
+    setStatus("prodStatus", "Товар добавлен ✅");
+    renderItems();
   });
 
-  $("btnLoadProd").addEventListener("click", async () => {
-    try { await loadProducts(); }
-    catch (e) { setStatus(prodStatusEl, "Ошибка: " + e.message); }
+  $("btnClear").addEventListener("click", ()=>{
+    selectedCP = null;
+    selectedProd = null;
+    items = [];
+    $("cpInput").value = "";
+    $("prodInput").value = "";
+    $("qtyInput").value = "";
+    $("note").value = "";
+    setStatus("cpStatus", counterparties.length ? `Загружено контрагентов: ${counterparties.length}` : "Контрагенты ещё не загружены.");
+    setStatus("prodStatus", products.length ? `Загружено товаров: ${products.length}` : "Товары ещё не загружены.");
+    setStatus("sendStatus", "Очищено.");
+    renderItems();
   });
 
-  $("btnClear").addEventListener("click", () => {
-    cpSearchEl.value = "";
-    cpListEl.innerHTML = "";
-    setStatus(cpStatusEl, "Очищено.");
+  // ====== SEND ORDER to API ======
+  $("btnSendOrder").addEventListener("click", async ()=>{
+    try{
+      const manager = $("manager").value;
+      const order_date = $("orderDate").value || todayISO();
+
+      if (!selectedCP){
+        setStatus("sendStatus", "Выбери контрагента из списка.");
+        return;
+      }
+      if (!items.length){
+        setStatus("sendStatus", "Добавь хотя бы 1 товар.");
+        return;
+      }
+
+      const payload = {
+        manager_name: manager,                     // у нас manager_name в API
+        counterparty_id: selectedCP.id,
+        counterparty_name: selectedCP.name,
+        address_market: "",                        // если нужно — добавим поле
+        truck_type: "",                            // если нужно — добавим поле
+        order_date: order_date,
+        items: items.map(x=>({product_id:x.product_id, product_name:x.product_name, qty:x.qty})),
+        note: $("note").value || ""
+      };
+
+      setStatus("sendStatus", "Отправляю заявку...");
+      const r = await fetch(`${API_BASE}/orders`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify(payload)
+      });
+      const text = await r.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,200)}`);
+      const data = JSON.parse(text);
+
+      setStatus("sendStatus", `Заявка отправлена ✅ ID: ${data.order_id || "-"}`);
+
+      // можно сразу закрывать, если хочешь:
+      // tg?.close();
+
+    } catch(e){
+      setStatus("sendStatus", "Ошибка: " + e.message);
+    }
   });
 
-  $("btnClose").addEventListener("click", () => {
-    if (tg) tg.close();
+  // ====== SEND DATA TO TG BOT (optional) ======
+  $("btnSendToTg").addEventListener("click", ()=>{
+    if (!tg) { setStatus("sendStatus", "Telegram WebApp API недоступен."); return; }
+
+    const payload = {
+      type:"order_draft",
+      manager: $("manager").value,
+      date: $("orderDate").value || todayISO(),
+      counterparty: selectedCP ? {id:selectedCP.id, name:selectedCP.name} : null,
+      items: items,
+      note: $("note").value || ""
+    };
+    tg.sendData(JSON.stringify(payload));
+    setStatus("sendStatus", "sendData отправлено в бота ✅");
   });
 
-  // Автоподгрузка: если менеджер выбрали — сразу грузим
-  managerEl.addEventListener("change", () => {
-    if (managerEl.value) $("btnLoadCp").click();
-  });
+  $("btnClose").addEventListener("click", ()=> tg?.close());
 
-})();
+  // init
+  $("orderDate").value = todayISO();
+  renderItems();
 </script>
 </body>
 </html>
