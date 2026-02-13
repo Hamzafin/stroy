@@ -1,488 +1,359 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stroy WebApp</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root{
-      --bg:#0b1220; --card:#0f1a33; --muted:#93a4c7; --text:#eaf0ff;
-      --line:rgba(255,255,255,.08);
-      --btn:#2f6bff; --btn2:#1d2a4a; --danger:#ff5252;
-      --shadow: 0 12px 30px rgba(0,0,0,.35);
-      --radius:18px;
-    }
-    *{box-sizing:border-box;}
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      background:var(--bg); color:var(--text);
-      padding:18px;
-    }
-    .wrap{max-width:760px;margin:0 auto;}
-    h1{margin:0 0 8px;text-align:center;font-size:26px;}
-    .sub{margin:0 0 18px;text-align:center;color:var(--muted);font-size:13px;}
-    .card{
-      background:var(--card); border:1px solid var(--line);
-      border-radius:var(--radius); padding:16px; box-shadow:var(--shadow);
-      margin:12px 0;
-    }
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-    @media (max-width:720px){.grid{grid-template-columns:1fr;}}
-    label{display:block;margin:0 0 6px;color:var(--muted);font-size:12px;}
-    input, select, textarea{
-      width:100%; padding:12px 12px; border-radius:14px;
-      border:1px solid var(--line); background:#0b1630; color:var(--text);
-      outline:none;
-    }
-    textarea{min-height:86px; resize:vertical;}
-    .row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;}
-    .row > *{flex:1;}
-    .btn{
-      padding:12px 14px; border-radius:14px; border:0;
-      cursor:pointer; color:white; font-weight:600;
-    }
-    .btn.primary{background:var(--btn);}
-    .btn.secondary{background:var(--btn2); color:var(--text);}
-    .btn.danger{background:transparent;border:1px solid rgba(255,82,82,.5);color:#ff9a9a;}
-    .status{margin-top:10px;color:var(--muted);font-size:13px;min-height:18px;}
-    .list{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
-    .item{
-      border:1px solid var(--line); border-radius:14px; padding:10px 12px;
-      display:flex; justify-content:space-between; gap:10px; align-items:center;
-      background:#0b1630;
-    }
-    .item .meta{color:var(--muted);font-size:12px;}
-    .item .name{font-weight:650;}
-    .pill{
-      padding:6px 10px; border-radius:999px; border:1px solid var(--line);
-      color:var(--muted); font-size:12px;
-    }
-
-    /* dropdown */
-    .ac-wrap{position:relative;}
-    .dropdown{
-      position:absolute; left:0; right:0; top:100%;
-      background:#071027; border:1px solid var(--line);
-      border-radius:14px; margin-top:6px; max-height:260px; overflow:auto;
-      box-shadow:var(--shadow); z-index:20; display:none;
-    }
-    .dropdown.show{display:block;}
-    .dd-item{
-      padding:10px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,.06);
-    }
-    .dd-item:last-child{border-bottom:0;}
-    .dd-item:hover{background:rgba(47,107,255,.12);}
-    .dd-title{font-weight:650;}
-    .dd-sub{font-size:12px;color:var(--muted);margin-top:2px;}
-    .footerBtn{
-      margin-top:14px;
-      width:100%;
-      padding:14px 16px;
-      border-radius:16px;
-      background:transparent;
-      border:1px solid rgba(255,82,82,.35);
-      color:#ff8080;
-      font-weight:700;
-      cursor:pointer;
-    }
+    :root { --bg:#0b1220; --card:#0f1b33; --txt:#e7eefc; --mut:#8aa0c6; --line:rgba(255,255,255,.08); --btn:#2b6fff; }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{margin:0;background:var(--bg);color:var(--txt);padding:16px}
+    h1{margin:6px 0 2px;text-align:center;font-size:22px}
+    .sub{margin:0 0 14px;text-align:center;color:var(--mut);font-size:13px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
+    label{display:block;color:var(--mut);font-size:12px;margin:10px 0 6px}
+    select,input,textarea{width:100%;background:#0b1630;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;outline:none}
+    textarea{min-height:72px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .hint{color:var(--mut);font-size:12px;margin-top:8px}
+    .list{border:1px solid var(--line);border-radius:12px;margin-top:8px;max-height:220px;overflow:auto;background:#081226}
+    .item{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+    .item:last-child{border-bottom:none}
+    .item:hover{background:rgba(255,255,255,.05)}
+    .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);font-size:12px}
+    .itemsBox{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+    .itRow{display:grid;grid-template-columns:1fr 90px 36px;gap:8px;align-items:center;margin:8px 0}
+    .x{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:10px;height:38px;cursor:pointer}
+    .btn{width:100%;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;background:var(--btn);color:white;margin-top:12px}
+    .err{color:#ff6b6b;font-size:13px;margin-top:10px;white-space:pre-wrap}
+    .ok{color:#67e8a7;font-size:13px;margin-top:10px}
+    .hidden{display:none}
   </style>
 </head>
 <body>
-<div class="wrap">
   <h1>Stroy WebApp</h1>
-  <p class="sub">Заявка в МойСклад → отправка в группы</p>
+  <p class="sub" id="subtitle">Заявка → отправка в группы</p>
 
   <div class="card">
-    <div class="grid">
-      <div>
-        <label>Менеджер</label>
-        <select id="manager">
-          <option value="булат">Булат</option>
-          <option value="магомед">Магомед</option>
-          <option value="амир">Амир</option>
-          <option value="шамиль">Шамиль</option>
-        </select>
+    <label>Менеджер</label>
+    <select id="manager">
+      <option value="булат">Булат</option>
+      <option value="магомед">Магомед</option>
+      <option value="амир">Амир</option>
+      <option value="шамиль">Шамиль</option>
+    </select>
+
+    <label>Дата</label>
+    <input id="docDate" type="date" />
+
+    <label>Контрагент</label>
+    <input id="cpInput" placeholder="Начни вводить имя контрагента..." autocomplete="off" />
+    <div class="hint" id="cpChosen">Не выбран</div>
+    <div class="list hidden" id="cpList"></div>
+
+    <div id="orderBlock" class="card" style="margin-top:14px">
+      <label>Товар</label>
+      <input id="prodInput" placeholder="Введи 2+ буквы товара..." autocomplete="off" />
+      <div class="list hidden" id="prodList"></div>
+
+      <div class="itemsBox">
+        <div class="pill" id="itemsCount">Товаров: 0</div>
+        <div id="items"></div>
       </div>
-      <div>
-        <label>Дата заявки</label>
-        <input id="orderDate" type="date">
-      </div>
+
+      <label>Комментарий</label>
+      <textarea id="orderNote" placeholder="например: срочно / доставка / адрес..."></textarea>
     </div>
 
-    <div style="height:10px"></div>
-
-    <div class="grid">
-      <div class="ac-wrap">
-        <label>Контрагент</label>
-        <input id="cpInput" placeholder="Начни вводить имя контрагента..." autocomplete="off">
-        <div id="cpDD" class="dropdown"></div>
-        <div class="status" id="cpStatus">Контрагенты ещё не загружены.</div>
-      </div>
-
-      <div>
-        <label>Действия</label>
-        <div class="row">
-          <button class="btn secondary" id="btnLoadCP" type="button">Загрузить контрагентов</button>
-          <button class="btn secondary" id="btnClear" type="button">Очистить</button>
+    <div id="moneyBlock" class="card hidden" style="margin-top:14px">
+      <div class="row">
+        <div>
+          <label>Тип</label>
+          <select id="direction">
+            <option value="приход">Приход</option>
+            <option value="расход">Расход</option>
+          </select>
+        </div>
+        <div>
+          <label>Сумма</label>
+          <input id="amount" type="number" inputmode="decimal" placeholder="например: 15000" />
         </div>
       </div>
+
+      <label>Комментарий</label>
+      <textarea id="moneyNote" placeholder="например: оплата наличными / перевод / за доставку..."></textarea>
     </div>
+
+    <button class="btn" id="sendBtn">Отправить</button>
+    <div class="err" id="err"></div>
+    <div class="ok" id="ok"></div>
   </div>
-
-  <div class="card">
-    <div class="grid">
-      <div class="ac-wrap">
-        <label>Товар</label>
-        <input id="prodInput" placeholder="Начни вводить товар..." autocomplete="off">
-        <div id="prodDD" class="dropdown"></div>
-        <div class="status" id="prodStatus">Товары ещё не загружены.</div>
-      </div>
-      <div>
-        <label>Количество</label>
-        <input id="qtyInput" type="number" step="0.01" min="0" placeholder="например: 10">
-      </div>
-    </div>
-
-    <div style="height:10px"></div>
-
-    <div class="row">
-      <button class="btn secondary" id="btnLoadProd" type="button">Загрузить товары</button>
-      <button class="btn primary" id="btnAddItem" type="button">Добавить товар</button>
-    </div>
-
-    <div class="list" id="itemsList"></div>
-  </div>
-
-  <div class="card">
-    <label>Комментарий (необязательно)</label>
-    <textarea id="note" placeholder="Например: доставка утром / самовывоз / срочно"></textarea>
-
-    <div style="height:12px"></div>
-
-    <div class="row">
-      <button class="btn primary" id="btnSendOrder" type="button">Отправить заявку</button>
-      <button class="btn secondary" id="btnSendToTg" type="button">Отправить в Telegram (sendData)</button>
-    </div>
-    <div class="status" id="sendStatus"></div>
-  </div>
-
-  <button class="footerBtn" type="button" id="btnClose">Закрыть WebApp</button>
-</div>
 
 <script>
-  const API_BASE = "https://api.stroybote.ru";
-
   const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
+  if (tg) tg.ready();
 
-  // ====== state ======
-  let counterparties = []; // {id,name,tags[]}
-  let products = [];       // {id,name,article}
-  let selectedCP = null;   // {id,name,...}
-  let selectedProd = null; // {id,name,...}
-  let items = [];          // {product_id, product_name, qty}
+  const API = "https://api.stroybote.ru";
 
-  // ====== helpers ======
-  const $ = (id)=>document.getElementById(id);
-  function setStatus(id, text){ $(id).textContent = text || ""; }
+  const qs = new URLSearchParams(location.search);
+  const mode = (qs.get("mode") || "order").toLowerCase(); // order | money
 
-  function todayISO(){
-    const d = new Date();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${d.getFullYear()}-${mm}-${dd}`;
-  }
+  const subtitle = document.getElementById("subtitle");
+  const orderBlock = document.getElementById("orderBlock");
+  const moneyBlock = document.getElementById("moneyBlock");
+  const sendBtn = document.getElementById("sendBtn");
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[m]));
-  }
+  subtitle.textContent = mode === "money"
+    ? "Деньги → отправка в группу менеджеров"
+    : "Заявка → отправка в группы";
+
+  orderBlock.classList.toggle("hidden", mode === "money");
+  moneyBlock.classList.toggle("hidden", mode !== "money");
+  sendBtn.textContent = mode === "money" ? "Отправить деньги" : "Отправить заявку";
+
+  // date today
+  const docDate = document.getElementById("docDate");
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  docDate.value = `${yyyy}-${mm}-${dd}`;
+
+  const managerSel = document.getElementById("manager");
+  const cpInput = document.getElementById("cpInput");
+  const cpList = document.getElementById("cpList");
+  const cpChosen = document.getElementById("cpChosen");
+
+  const prodInput = document.getElementById("prodInput");
+  const prodList = document.getElementById("prodList");
+  const itemsBox = document.getElementById("items");
+  const itemsCount = document.getElementById("itemsCount");
+
+  const direction = document.getElementById("direction");
+  const amount = document.getElementById("amount");
+
+  const orderNote = document.getElementById("orderNote");
+  const moneyNote = document.getElementById("moneyNote");
+
+  const err = document.getElementById("err");
+  const ok = document.getElementById("ok");
+
+  let cpAll = [];            // контрагенты менеджера (кэш)
+  let cpSelected = null;     // {id,name}
+  let items = [];            // [{product_id, product_name, qty}]
+
+  function setErr(t){ err.textContent = t || ""; ok.textContent = ""; }
+  function setOk(t){ ok.textContent = t || ""; err.textContent = ""; }
+
+  function show(el){ el.classList.remove("hidden"); }
+  function hide(el){ el.classList.add("hidden"); }
 
   async function fetchJSON(url){
     const r = await fetch(url, { method:"GET" });
-    if (!r.ok) {
-      const t = await r.text().catch(()=> "");
-      throw new Error(`HTTP ${r.status}: ${t.slice(0,200)}`);
-    }
-    return r.json();
+    const txt = await r.text();
+    if (!r.ok) throw new Error(txt || `HTTP ${r.status}`);
+    return JSON.parse(txt);
   }
 
-  function showDropdown(ddEl, rows, onPick){
-    ddEl.innerHTML = "";
-    if (!rows.length){ ddEl.classList.remove("show"); return; }
+  // ---- Counterparties: prefetch on manager change ----
+  async function loadCounterpartiesForManager(){
+    setErr("");
+    cpSelected = null;
+    cpChosen.textContent = "Не выбран";
+    cpInput.value = "";
+    hide(cpList);
 
-    for (const row of rows) {
-      const div = document.createElement("div");
-      div.className = "dd-item";
-      div.innerHTML = `
-        <div class="dd-title">${escapeHtml(row.name)}</div>
-        ${row.tags ? `<div class="dd-sub">теги: ${escapeHtml((row.tags||[]).join(", "))}</div>` : ""}
-      `;
-      div.addEventListener("click", ()=> onPick(row));
-      ddEl.appendChild(div);
-    }
-    ddEl.classList.add("show");
-  }
-
-  function hideDropdown(ddEl){ ddEl.classList.remove("show"); }
-
-  // ====== load counterparties (by manager tag) ======
-  async function loadCounterparties(){
-    const manager = $("manager").value;
-    setStatus("cpStatus", "Загружаю контрагентов...");
-    selectedCP = null;
-    $("cpInput").value = "";
-
-    // твой API ожидает manager=
-    const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(manager)}&limit=1000`;
+    const tag = managerSel.value;
+    const url = `${API}/ms/counterparties?` + new URLSearchParams({ manager: tag, limit: "500" }).toString();
     const data = await fetchJSON(url);
-    counterparties = data.rows || [];
-    setStatus("cpStatus", `Загружено контрагентов: ${counterparties.length}`);
+    cpAll = (data.rows || []).map(r => ({ id:r.id, name:r.name }));
   }
 
-  // ====== load ALL products via pagination ======
-  async function loadAllProducts(){
-    setStatus("prodStatus", "Загружаю товары (все страницы)...");
-    products = [];
-    selectedProd = null;
-    $("prodInput").value = "";
+  function renderCpList(query){
+    const q = (query || "").trim().toLowerCase();
+    const list = q
+      ? cpAll.filter(x => x.name.toLowerCase().includes(q)).slice(0, 30)
+      : cpAll.slice(0, 30);
 
-    const limit = 100;
-    let offset = 0;
+    cpList.innerHTML = "";
+    if (!list.length){ hide(cpList); return; }
 
-    while (true){
-      const url = `${API_BASE}/ms/products?limit=${limit}&offset=${offset}`;
-      const data = await fetchJSON(url);
-      const rows = data.rows || [];
-      products.push(...rows);
-      if (rows.length < limit) break;
-      offset += limit;
-      if (products.length > 5000) break; // защита на всякий
-    }
-
-    setStatus("prodStatus", `Загружено товаров: ${products.length}`);
-  }
-
-  // ====== render items list ======
-  function renderItems(){
-    const list = $("itemsList");
-    list.innerHTML = "";
-    if (!items.length){
-      const p = document.createElement("div");
-      p.className = "status";
-      p.textContent = "Список товаров пуст.";
-      list.appendChild(p);
-      return;
-    }
-
-    items.forEach((it, idx)=>{
+    list.forEach(x => {
       const div = document.createElement("div");
       div.className = "item";
-      div.innerHTML = `
-        <div>
-          <div class="name">${escapeHtml(it.product_name)}</div>
-          <div class="meta">кол-во: ${it.qty}</div>
-        </div>
-        <button class="btn danger" type="button" data-idx="${idx}">Удалить</button>
-      `;
-      div.querySelector("button").addEventListener("click", ()=>{
-        items.splice(idx,1);
-        renderItems();
-      });
-      list.appendChild(div);
+      div.textContent = x.name;
+      div.onclick = () => {
+        cpSelected = x;
+        cpInput.value = x.name;
+        cpChosen.textContent = `Выбран: ${x.name} (${managerSel.options[managerSel.selectedIndex].text})`;
+        hide(cpList);
+      };
+      cpList.appendChild(div);
     });
+    show(cpList);
   }
 
-  // ====== autocomplete: counterparties ======
-  function filterCP(q){
-    q = (q||"").trim().toLowerCase();
-    if (!q) return counterparties.slice(0, 30);
-    const res = counterparties.filter(x => (x.name||"").toLowerCase().includes(q));
-    return res.slice(0, 30);
-  }
-
-  $("cpInput").addEventListener("input", ()=>{
-    const dd = $("cpDD");
-    const rows = filterCP($("cpInput").value);
-    showDropdown(dd, rows, (row)=>{
-      selectedCP = row;
-      $("cpInput").value = row.name;
-      hideDropdown(dd);
-      setStatus("cpStatus", `Выбран: ${row.name}`);
-    });
-  });
-
-  $("cpInput").addEventListener("focus", ()=>{
-    if (!counterparties.length) return;
-    const dd = $("cpDD");
-    const rows = filterCP($("cpInput").value);
-    showDropdown(dd, rows, (row)=>{
-      selectedCP = row;
-      $("cpInput").value = row.name;
-      hideDropdown(dd);
-      setStatus("cpStatus", `Выбран: ${row.name}`);
-    });
-  });
-
-  // ====== autocomplete: products ======
-  function filterProd(q){
-    q = (q||"").trim().toLowerCase();
-    if (!q) return products.slice(0, 30);
-    const res = products.filter(x => (x.name||"").toLowerCase().includes(q));
-    return res.slice(0, 30);
-  }
-
-  $("prodInput").addEventListener("input", ()=>{
-    const dd = $("prodDD");
-    const rows = filterProd($("prodInput").value);
-    showDropdown(dd, rows, (row)=>{
-      selectedProd = row;
-      $("prodInput").value = row.name;
-      hideDropdown(dd);
-      setStatus("prodStatus", `Выбран товар: ${row.name}`);
-    });
-  });
-
-  $("prodInput").addEventListener("focus", ()=>{
-    if (!products.length) return;
-    const dd = $("prodDD");
-    const rows = filterProd($("prodInput").value);
-    showDropdown(dd, rows, (row)=>{
-      selectedProd = row;
-      $("prodInput").value = row.name;
-      hideDropdown(dd);
-      setStatus("prodStatus", `Выбран товар: ${row.name}`);
-    });
-  });
-
-  // hide dropdown on outside click
-  document.addEventListener("click", (e)=>{
-    const cpWrap = $("cpInput").closest(".ac-wrap");
-    const prWrap = $("prodInput").closest(".ac-wrap");
-    if (cpWrap && !cpWrap.contains(e.target)) hideDropdown($("cpDD"));
-    if (prWrap && !prWrap.contains(e.target)) hideDropdown($("prodDD"));
-  });
-
-  // ====== actions ======
-  $("btnLoadCP").addEventListener("click", async ()=>{
-    try{ await loadCounterparties(); }
-    catch(e){ setStatus("cpStatus", "Ошибка: " + e.message); }
-  });
-
-  $("btnLoadProd").addEventListener("click", async ()=>{
-    try{ await loadAllProducts(); }
-    catch(e){ setStatus("prodStatus", "Ошибка: " + e.message); }
-  });
-
-  $("btnAddItem").addEventListener("click", ()=>{
-    const qty = Number($("qtyInput").value);
-    if (!selectedProd){
-      setStatus("prodStatus", "Выбери товар из списка (кликни по выпадающему).");
-      return;
-    }
-    if (!qty || qty <= 0){
-      setStatus("prodStatus", "Укажи количество (> 0).");
-      return;
-    }
-
-    items.push({
-      product_id: selectedProd.id,
-      product_name: selectedProd.name,
-      qty: qty
-    });
-
-    $("qtyInput").value = "";
-    $("prodInput").value = "";
-    selectedProd = null;
-
-    setStatus("prodStatus", "Товар добавлен ✅");
-    renderItems();
-  });
-
-  $("btnClear").addEventListener("click", ()=>{
-    selectedCP = null;
-    selectedProd = null;
-    items = [];
-    $("cpInput").value = "";
-    $("prodInput").value = "";
-    $("qtyInput").value = "";
-    $("note").value = "";
-    setStatus("cpStatus", counterparties.length ? `Загружено контрагентов: ${counterparties.length}` : "Контрагенты ещё не загружены.");
-    setStatus("prodStatus", products.length ? `Загружено товаров: ${products.length}` : "Товары ещё не загружены.");
-    setStatus("sendStatus", "Очищено.");
-    renderItems();
-  });
-
-  // ====== SEND ORDER to API ======
-  $("btnSendOrder").addEventListener("click", async ()=>{
+  managerSel.addEventListener("change", async () => {
     try{
-      const manager = $("manager").value;
-      const order_date = $("orderDate").value || todayISO();
+      await loadCounterpartiesForManager();
+      setOk("Контрагенты подгружены.");
+    }catch(e){
+      setErr("Ошибка загрузки контрагентов: " + e.message);
+    }
+  });
 
-      if (!selectedCP){
-        setStatus("sendStatus", "Выбери контрагента из списка.");
-        return;
-      }
-      if (!items.length){
-        setStatus("sendStatus", "Добавь хотя бы 1 товар.");
-        return;
-      }
+  cpInput.addEventListener("focus", () => renderCpList(cpInput.value));
+  cpInput.addEventListener("input", () => renderCpList(cpInput.value));
+  document.addEventListener("click", (e) => {
+    if (!cpList.contains(e.target) && e.target !== cpInput) hide(cpList);
+  });
+
+  // ---- Products: search on demand (2+ chars) ----
+  let prodTimer = null;
+  async function searchProducts(q){
+    const query = (q||"").trim();
+    if (query.length < 2){ hide(prodList); prodList.innerHTML=""; return; }
+    const url = `${API}/ms/products?` + new URLSearchParams({ search: query, limit:"30" }).toString();
+    const data = await fetchJSON(url);
+
+    const rows = data.rows || [];
+    // frontend dedupe safety
+    const seen = new Set();
+    const uniq = [];
+    for (const r of rows){
+      const name = (r.name||"").trim();
+      const key = name.toLowerCase();
+      if (!name || seen.has(key)) continue;
+      seen.add(key);
+      uniq.push(r);
+    }
+
+    prodList.innerHTML = "";
+    if (!uniq.length){ hide(prodList); return; }
+
+    uniq.forEach(r => {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.textContent = r.name;
+      div.onclick = () => {
+        addItem({ product_id: r.id, product_name: r.name, qty: 1 });
+        prodInput.value = "";
+        hide(prodList);
+      };
+      prodList.appendChild(div);
+    });
+    show(prodList);
+  }
+
+  prodInput?.addEventListener("input", () => {
+    clearTimeout(prodTimer);
+    prodTimer = setTimeout(() => searchProducts(prodInput.value), 250);
+  });
+  prodInput?.addEventListener("focus", () => {
+    if (prodInput.value.trim().length >= 2) searchProducts(prodInput.value);
+  });
+  document.addEventListener("click", (e) => {
+    if (!prodList.contains(e.target) && e.target !== prodInput) hide(prodList);
+  });
+
+  function addItem(it){
+    // если уже есть такой товар — просто увеличим qty
+    const idx = items.findIndex(x => (x.product_name||"").toLowerCase() === it.product_name.toLowerCase());
+    if (idx >= 0){
+      items[idx].qty = Number(items[idx].qty) + Number(it.qty);
+    } else {
+      items.push(it);
+    }
+    renderItems();
+  }
+
+  function renderItems(){
+    itemsBox.innerHTML = "";
+    itemsCount.textContent = `Товаров: ${items.length}`;
+
+    items.forEach((it, i) => {
+      const row = document.createElement("div");
+      row.className = "itRow";
+
+      const name = document.createElement("div");
+      name.textContent = it.product_name;
+
+      const qty = document.createElement("input");
+      qty.type = "number";
+      qty.value = it.qty;
+      qty.min = "1";
+      qty.oninput = () => { items[i].qty = Number(qty.value || 1); };
+
+      const del = document.createElement("button");
+      del.className = "x";
+      del.textContent = "✕";
+      del.onclick = () => { items.splice(i,1); renderItems(); };
+
+      row.appendChild(name);
+      row.appendChild(qty);
+      row.appendChild(del);
+      itemsBox.appendChild(row);
+    });
+  }
+
+  // initial load counterparties for default manager
+  loadCounterpartiesForManager().catch(()=>{});
+
+  // ---- SEND: only sendData (no fetch) ----
+  sendBtn.addEventListener("click", async () => {
+    try{
+      setErr("");
+
+      const manager = managerSel.value;
+      const date = docDate.value;
+
+      if (!cpSelected) throw new Error("Выбери контрагента из подсказок.");
 
       const payload = {
-        manager_name: manager,                     // у нас manager_name в API
-        counterparty_id: selectedCP.id,
-        counterparty_name: selectedCP.name,
-        address_market: "",                        // если нужно — добавим поле
-        truck_type: "",                            // если нужно — добавим поле
-        order_date: order_date,
-        items: items.map(x=>({product_id:x.product_id, product_name:x.product_name, qty:x.qty})),
-        note: $("note").value || ""
+        kind: mode === "money" ? "money" : "order",
+        manager_name: manager,
+        date,
+        counterparty_id: cpSelected.id,
+        counterparty_name: cpSelected.name,
+        note: mode === "money" ? (moneyNote.value || "") : (orderNote.value || ""),
       };
 
-      setStatus("sendStatus", "Отправляю заявку...");
-      const r = await fetch(`${API_BASE}/orders`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(payload)
-      });
-      const text = await r.text();
-      if (!r.ok) throw new Error(`HTTP ${r.status}: ${text.slice(0,200)}`);
-      const data = JSON.parse(text);
+      if (mode === "money"){
+        const a = Number(amount.value || 0);
+        if (!(a > 0)) throw new Error("Укажи сумму (>0).");
+        payload.amount = a;
+        payload.direction = direction.value;
+      } else {
+        if (!items.length) throw new Error("Добавь хотя бы 1 товар.");
+        payload.items = items.map(x => ({
+          product_id: x.product_id || null,
+          product_name: x.product_name,
+          qty: Number(x.qty || 1)
+        }));
+      }
 
-      setStatus("sendStatus", `Заявка отправлена ✅ ID: ${data.order_id || "-"}`);
+      if (!tg){
+        throw new Error("Открой WebApp внутри Telegram (кнопкой в боте).");
+      }
 
-      // можно сразу закрывать, если хочешь:
-      // tg?.close();
+      tg.sendData(JSON.stringify(payload));
+      setOk("Отправлено в Telegram ✅");
 
-    } catch(e){
-      setStatus("sendStatus", "Ошибка: " + e.message);
+      // очистим форму после отправки
+      if (mode === "money"){
+        amount.value = "";
+        moneyNote.value = "";
+      } else {
+        items = [];
+        renderItems();
+        orderNote.value = "";
+      }
+      // контрагента оставим выбранным — чтобы быстрее делать много заявок
+    }catch(e){
+      setErr("Ошибка: " + e.message);
     }
   });
-
-  // ====== SEND DATA TO TG BOT (optional) ======
-  $("btnSendToTg").addEventListener("click", ()=>{
-    if (!tg) { setStatus("sendStatus", "Telegram WebApp API недоступен."); return; }
-
-    const payload = {
-      type:"order_draft",
-      manager: $("manager").value,
-      date: $("orderDate").value || todayISO(),
-      counterparty: selectedCP ? {id:selectedCP.id, name:selectedCP.name} : null,
-      items: items,
-      note: $("note").value || ""
-    };
-    tg.sendData(JSON.stringify(payload));
-    setStatus("sendStatus", "sendData отправлено в бота ✅");
-  });
-
-  $("btnClose").addEventListener("click", ()=> tg?.close());
-
-  // init
-  $("orderDate").value = todayISO();
-  renderItems();
 </script>
 </body>
 </html>
