@@ -1,410 +1,534 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Stroy WebApp</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#94a3b8; --line:#1f2937; --btn:#2563eb; --btn2:#16a34a; --err:#ef4444; }
-    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); padding:14px; }
-    h1 { font-size:18px; margin:0 0 10px; text-align:center; }
-    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; }
-    label { display:block; font-size:12px; color:var(--muted); margin-top:10px; }
-    input, select, textarea { width:100%; padding:10px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); outline:none; }
-    textarea{ min-height:70px; resize:vertical; }
-    .row { display:flex; gap:10px; }
-    .row > div { flex:1; }
-    .listbox { position:relative; }
-    .dropdown { position:absolute; left:0; right:0; top:100%; z-index:50; background:#0b1220; border:1px solid var(--line); border-radius:12px; margin-top:6px; max-height:240px; overflow:auto; display:none; }
-    .opt { padding:10px; border-bottom:1px solid #0f172a; cursor:pointer; }
-    .opt:hover { background:#111b33; }
-    .muted { color:var(--muted); font-size:12px; }
-    .err { color:var(--err); font-size:12px; margin-top:8px; white-space:pre-wrap; }
-    .btn { margin-top:14px; width:100%; padding:12px; border-radius:14px; border:0; color:white; background:var(--btn2); font-weight:700; cursor:pointer; }
-    .items { margin-top:10px; border-top:1px dashed var(--line); padding-top:10px; }
-    .itemRow { display:flex; gap:10px; margin-top:10px; align-items:center; }
-    .itemRow input { flex:1; }
-    .smallBtn { padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); cursor:pointer; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; padding:16px;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:#0b1220; color:#e5e7eb;
+    }
+    .wrap{max-width:760px;margin:0 auto}
+    h1{margin:0 0 10px;text-align:center;font-size:22px}
+    .card{
+      background:linear-gradient(180deg,#0f1a33,#0b1220);
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:18px;
+      padding:14px;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+      margin-bottom:14px;
+    }
+    label{display:block;font-size:12px;color:#94a3b8;margin:10px 0 6px}
+    select,input,textarea,button{
+      width:100%;
+      border-radius:14px;
+      border:1px solid rgba(148,163,184,.18);
+      background:#0c1630;
+      color:#e5e7eb;
+      padding:12px 12px;
+      font-size:16px;
+      outline:none;
+    }
+    textarea{min-height:80px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .btn{
+      border:none;
+      background:#22c55e;
+      color:#05210e;
+      font-weight:800;
+      padding:14px 14px;
+      cursor:pointer;
+      border-radius:16px;
+      margin-top:12px;
+    }
+    .btn2{
+      border:1px solid rgba(148,163,184,.18);
+      background:#0c1630;
+      color:#e5e7eb;
+      font-weight:700;
+      padding:12px;
+      cursor:pointer;
+      border-radius:14px;
+    }
+    .hint{font-size:12px;color:#94a3b8;margin-top:6px}
+    .err{color:#fb7185;font-size:12px;margin-top:10px}
+    .ok{color:#34d399;font-size:12px;margin-top:10px}
+
+    /* suggestions dropdown */
+    .suggest-wrap{position:relative}
+    .suggest{
+      position:absolute; left:0; right:0; top:100%;
+      background:#0a132b;
+      border:1px solid rgba(148,163,184,.2);
+      border-radius:14px;
+      margin-top:6px;
+      max-height:220px;
+      overflow:auto;
+      display:none;
+      z-index:50;
+    }
+    .suggest .item{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.10);
+      cursor:pointer;
+    }
+    .suggest .item:last-child{border-bottom:none}
+    .suggest .item:hover{background:#0c1a3d}
+    .pill{
+      display:inline-block;
+      padding:4px 10px;
+      border:1px solid rgba(148,163,184,.18);
+      border-radius:999px;
+      font-size:12px;color:#cbd5e1;
+    }
+
+    .items{
+      margin-top:10px;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .items .line{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.10);
+    }
+    .items .line:last-child{border-bottom:none}
+    .x{
+      width:auto;
+      padding:8px 10px;
+      border-radius:12px;
+      background:#111c3a;
+      border:1px solid rgba(148,163,184,.18);
+      color:#e5e7eb;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .muted{color:#94a3b8;font-size:12px}
   </style>
 </head>
 <body>
-  <h1 id="title">Форма</h1>
+<div class="wrap">
+  <h1 id="title">Заявка</h1>
 
   <div class="card">
     <div class="row">
       <div>
-        <label>Менеджер</label>
-        <select id="manager">
-          <option value="">— выбери —</option>
-          <option value="булат">Булат</option>
-          <option value="менеджер2">Менеджер 2</option>
-          <option value="менеджер3">Менеджер 3</option>
-          <option value="менеджер4">Менеджер 4</option>
+        <label>Менеджер (из тегов МойСклад)</label>
+        <select id="managerSelect">
+          <option value="">— загрузка… —</option>
         </select>
+        <div class="hint">Менеджеры подтягиваются автоматически из тегов. Добавишь новый тег в МойСклад — появится тут.</div>
       </div>
       <div>
         <label>Дата</label>
-        <input id="docDate" type="date" />
+        <input id="docDate" type="date">
       </div>
     </div>
 
     <label>Контрагент</label>
-    <div class="listbox">
-      <input id="cpInput" type="text" placeholder="начни вводить или просто нажми" autocomplete="off"/>
-      <div id="cpList" class="dropdown"></div>
+    <div class="suggest-wrap">
+      <input id="cpInput" type="text" placeholder="Начни вводить имя контрагента…" autocomplete="off">
+      <div id="cpSuggest" class="suggest"></div>
     </div>
-    <div class="muted" id="cpHint"></div>
+    <div class="hint" id="cpHint">Выбери менеджера — и контрагенты подтянутся по его тегу.</div>
 
-    <!-- ORDER -->
-    <div id="orderBox" style="display:none">
-      <div class="items">
-        <label>Товар</label>
-        <div class="listbox">
-          <input id="prodInput" type="text" placeholder="нажми или начни вводить" autocomplete="off"/>
-          <div id="prodList" class="dropdown"></div>
+    <div id="orderBlock">
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Товар</label>
+          <div class="suggest-wrap">
+            <input id="prodInput" type="text" placeholder="Кликни — появится список. Или начни вводить…" autocomplete="off">
+            <div id="prodSuggest" class="suggest"></div>
+          </div>
+          <div class="hint">При клике показывает список. При вводе — фильтрует.</div>
         </div>
-
-        <label>Количество</label>
-        <input id="qtyInput" type="number" min="0.01" step="0.01" placeholder="например: 3" />
-
-        <div class="itemRow">
-          <button class="smallBtn" id="addItemBtn" type="button">+ Добавить позицию</button>
-          <button class="smallBtn" id="clearItemsBtn" type="button">Очистить</button>
+        <div>
+          <label>Количество</label>
+          <input id="qtyInput" type="number" step="1" min="1" placeholder="например: 3">
         </div>
-
-        <div class="muted" id="itemsInfo"></div>
       </div>
 
-      <label>Комментарий</label>
-      <textarea id="noteOrder" placeholder="комментарий (не обязательно)"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn2" id="addItemBtn" type="button">+ Добавить позицию</button>
+        <button class="btn2" id="clearItemsBtn" type="button">Очистить позиции</button>
+      </div>
+
+      <div class="hint"><span class="pill" id="itemsStat">Позиции: 0</span></div>
+      <div id="itemsBox" class="items" style="display:none"></div>
     </div>
 
-    <!-- MONEY -->
-    <div id="moneyBox" style="display:none">
-      <label>Сумма (возврат долга)</label>
-      <input id="amount" type="number" min="0.01" step="0.01" placeholder="например: 15000" />
-
-      <label>Комментарий</label>
-      <textarea id="noteMoney" placeholder="комментарий (не обязательно)"></textarea>
+    <div id="moneyBlock" style="display:none">
+      <label>Сумма возврата долга</label>
+      <input id="moneyAmount" type="text" inputmode="numeric" placeholder="например: 300 000">
+      <div class="hint">Пробелы ставятся автоматически: 300 000</div>
     </div>
 
-    <button class="btn" id="sendBtn">Отправить в бот</button>
-    <div class="err" id="errBox"></div>
+    <label>Комментарий (не обязательно)</label>
+    <textarea id="note" placeholder="комментарий…"></textarea>
+
+    <button class="btn" id="sendBtn" type="button">Отправить в бот</button>
+    <div id="msg" class="err" style="display:none"></div>
   </div>
+</div>
 
 <script>
   const tg = window.Telegram?.WebApp;
-  if (tg) tg.ready();
+  if (tg) { tg.ready(); tg.expand(); }
 
-  const API_BASE = "https://api.stroybote.ru";
+  const API_BASE = "https://api.stroybote.ru"; // если поменяешь домен — меняй тут
+  const params = new URLSearchParams(location.search);
+  const mode = (params.get("mode") || "order").toLowerCase(); // order | money
 
-  const mode = new URLSearchParams(location.search).get("mode") || "order";
-  const title = document.getElementById("title");
-  const managerSel = document.getElementById("manager");
+  const titleEl = document.getElementById("title");
+  const managerSelect = document.getElementById("managerSelect");
   const docDate = document.getElementById("docDate");
 
   const cpInput = document.getElementById("cpInput");
-  const cpList = document.getElementById("cpList");
+  const cpSuggest = document.getElementById("cpSuggest");
   const cpHint = document.getElementById("cpHint");
 
-  const orderBox = document.getElementById("orderBox");
-  const moneyBox = document.getElementById("moneyBox");
+  const orderBlock = document.getElementById("orderBlock");
+  const moneyBlock = document.getElementById("moneyBlock");
 
   const prodInput = document.getElementById("prodInput");
-  const prodList = document.getElementById("prodList");
+  const prodSuggest = document.getElementById("prodSuggest");
   const qtyInput = document.getElementById("qtyInput");
+
   const addItemBtn = document.getElementById("addItemBtn");
   const clearItemsBtn = document.getElementById("clearItemsBtn");
-  const itemsInfo = document.getElementById("itemsInfo");
-  const noteOrder = document.getElementById("noteOrder");
+  const itemsBox = document.getElementById("itemsBox");
+  const itemsStat = document.getElementById("itemsStat");
 
-  const amount = document.getElementById("amount");
-  const noteMoney = document.getElementById("noteMoney");
-
+  const moneyAmount = document.getElementById("moneyAmount");
+  const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
-  const errBox = document.getElementById("errBox");
+  const msg = document.getElementById("msg");
 
-  // date default today
-  const today = new Date();
-  docDate.value = today.toISOString().slice(0,10);
-
-  // mode UI
+  // mode setup
   if (mode === "money") {
-    title.textContent = "Деньги";
-    moneyBox.style.display = "block";
+    titleEl.textContent = "Деньги";
+    orderBlock.style.display = "none";
+    moneyBlock.style.display = "block";
   } else {
-    title.textContent = "Заявка";
-    orderBox.style.display = "block";
+    titleEl.textContent = "Заявка";
+    orderBlock.style.display = "block";
+    moneyBlock.style.display = "none";
   }
+
+  // date today
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth()+1).padStart(2,'0');
+  const dd = String(today.getDate()).padStart(2,'0');
+  docDate.value = `${yyyy}-${mm}-${dd}`;
 
   // state
-  let cpRows = [];
-  let selectedCp = null;
-
-  let lastProdResults = [];
-  let prodAbort = null;
-  let cpAbort = null;
+  let managerTag = "";
+  let counterparties = []; // {id,name}
+  let cpSelectedId = "";
+  let cpSelectedName = "";
 
   let items = []; // {product_id, product_name, qty}
+  let prodSelectedId = "";
+  let prodSelectedName = "";
 
-  function setErr(msg) { errBox.textContent = msg || ""; }
-  function show(el) { el.style.display = "block"; }
-  function hide(el) { el.style.display = "none"; }
+  function showError(text) {
+    msg.className = "err";
+    msg.style.display = "block";
+    msg.textContent = text;
+  }
+  function showOk(text) {
+    msg.className = "ok";
+    msg.style.display = "block";
+    msg.textContent = text;
+  }
+  function hideMsg(){ msg.style.display="none"; msg.textContent=""; }
 
-  function renderList(container, rows, onPick) {
-    container.innerHTML = "";
-    if (!rows.length) {
-      container.innerHTML = `<div class="opt muted">ничего не найдено</div>`;
-      show(container);
+  function openSuggest(box){ box.style.display = "block"; }
+  function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
+
+  // --- managers from tags ---
+  async function loadManagers() {
+    managerSelect.innerHTML = `<option value="">— выбери —</option>`;
+    const r = await fetch(`${API_BASE}/ms/managers`);
+    const j = await r.json();
+    const rows = j.rows || [];
+    for (const x of rows) {
+      const t = x.tag;
+      const c = x.count || 0;
+      const opt = document.createElement("option");
+      opt.value = t;
+      opt.textContent = `${t} (${c})`;
+      managerSelect.appendChild(opt);
+    }
+  }
+
+  // --- counterparties (by manager tag) ---
+  async function loadCounterpartiesByTag(tag) {
+    counterparties = [];
+    cpSelectedId = "";
+    cpSelectedName = "";
+    cpInput.value = "";
+    cpInput.dataset.id = "";
+    cpHint.textContent = "Загружаю контрагентов…";
+
+    const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`;
+    const r = await fetch(url);
+    const j = await r.json();
+    const rows = j.rows || [];
+    counterparties = rows
+      .filter(x => x && x.name)
+      .map(x => ({id: x.id || "", name: x.name}));
+
+    cpHint.textContent = `Загружено контрагентов: ${counterparties.length}`;
+  }
+
+  function renderCpSuggest(filterText="") {
+    const q = (filterText || "").trim().toLowerCase();
+    const list = q
+      ? counterparties.filter(x => x.name.toLowerCase().includes(q))
+      : counterparties;
+
+    const top = list.slice(0, 60);
+    cpSuggest.innerHTML = "";
+    for (const x of top) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.textContent = x.name;
+      div.onclick = () => {
+        cpSelectedId = x.id;
+        cpSelectedName = x.name;
+        cpInput.value = x.name;
+        cpInput.dataset.id = x.id || "";
+        closeSuggest(cpSuggest);
+      };
+      cpSuggest.appendChild(div);
+    }
+    if (top.length === 0) {
+      const div = document.createElement("div");
+      div.className = "item muted";
+      div.textContent = "Ничего не найдено";
+      cpSuggest.appendChild(div);
+    }
+    openSuggest(cpSuggest);
+  }
+
+  // --- products (search endpoint, show list on focus) ---
+  let prodDebounce = null;
+
+  async function fetchProducts(searchText="") {
+    const url = `${API_BASE}/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`;
+    const r = await fetch(url);
+    const j = await r.json();
+    return (j.rows || []).map(x => ({id: x.id || "", name: x.name || ""})).filter(x => x.name);
+  }
+
+  async function renderProdSuggest(searchText="") {
+    const list = await fetchProducts(searchText || "");
+    prodSuggest.innerHTML = "";
+    for (const x of list.slice(0, 60)) {
+      const div = document.createElement("div");
+      div.className = "item";
+      div.textContent = x.name;
+      div.onclick = () => {
+        prodSelectedId = x.id;
+        prodSelectedName = x.name;
+        prodInput.value = x.name;
+        prodInput.dataset.id = x.id || "";
+        closeSuggest(prodSuggest);
+      };
+      prodSuggest.appendChild(div);
+    }
+    if (list.length === 0) {
+      const div = document.createElement("div");
+      div.className = "item muted";
+      div.textContent = "Ничего не найдено";
+      prodSuggest.appendChild(div);
+    }
+    openSuggest(prodSuggest);
+  }
+
+  // --- items list ---
+  function updateItemsUI() {
+    itemsStat.textContent = `Позиции: ${items.length}`;
+    if (items.length === 0) {
+      itemsBox.style.display = "none";
+      itemsBox.innerHTML = "";
       return;
     }
-    rows.forEach(r => {
-      const div = document.createElement("div");
-      div.className = "opt";
-      div.textContent = r.name;
-      div.onclick = () => onPick(r);
-      container.appendChild(div);
+    itemsBox.style.display = "block";
+    itemsBox.innerHTML = "";
+    items.forEach((it, idx) => {
+      const row = document.createElement("div");
+      row.className = "line";
+      row.innerHTML = `<div>${idx+1}) ${it.product_name} — <b>${it.qty}</b></div>`;
+      const btn = document.createElement("button");
+      btn.className = "x";
+      btn.type = "button";
+      btn.textContent = "✕";
+      btn.onclick = () => {
+        items.splice(idx, 1);
+        updateItemsUI();
+      };
+      row.appendChild(btn);
+      itemsBox.appendChild(row);
     });
-    show(container);
   }
 
-  async function loadCounterparties(manager, search=null) {
-    if (!manager) return;
-    if (cpAbort) cpAbort.abort();
-    cpAbort = new AbortController();
-
-    const url = new URL(API_BASE + "/ms/counterparties");
-    url.searchParams.set("manager", manager);
-    url.searchParams.set("limit", "1000");
-    if (search) url.searchParams.set("search", search);
-
-    const r = await fetch(url.toString(), { signal: cpAbort.signal });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
-    cpRows = j.rows || [];
+  // --- money input formatting with spaces ---
+  function formatSpacesDigits(raw) {
+    const digits = (raw || "").replace(/\D+/g, "");
+    if (!digits) return "";
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 
-  function filterCounterpartiesLocal(q) {
-    const s = (q||"").trim().toLowerCase();
-    if (!s) return cpRows.slice(0, 30);
-    const res = cpRows.filter(x => (x.name||"").toLowerCase().includes(s));
-    return res.slice(0, 30);
+  if (moneyAmount) {
+    moneyAmount.addEventListener("input", () => {
+      const v = formatSpacesDigits(moneyAmount.value);
+      moneyAmount.value = v;
+    });
   }
 
-  // Counterparty: auto load on manager select
-  managerSel.addEventListener("change", async () => {
-    setErr("");
-    selectedCp = null;
-    cpInput.value = "";
-    cpInput.dataset.cpid = "";
-    cpHint.textContent = "";
-
-    const m = managerSel.value.trim();
-    if (!m) return;
-
+  // events
+  managerSelect.addEventListener("change", async () => {
+    hideMsg();
+    managerTag = managerSelect.value || "";
+    if (!managerTag) {
+      cpHint.textContent = "Выбери менеджера — и контрагенты подтянутся по его тегу.";
+      counterparties = [];
+      return;
+    }
     try {
-      cpHint.textContent = "Загружаю контрагентов...";
-      await loadCounterparties(m);
-      cpHint.textContent = `Загружено: ${cpRows.length}`;
-      // сразу показать список при выборе менеджера (топ-30)
-      renderList(cpList, filterCounterpartiesLocal(""), (r) => {
-        selectedCp = r;
-        cpInput.value = r.name;
-        cpInput.dataset.cpid = r.id || "";
-        hide(cpList);
-      });
+      await loadCounterpartiesByTag(managerTag);
     } catch (e) {
-      cpHint.textContent = "";
-      setErr("Ошибка загрузки контрагентов: " + (e.message || e));
+      showError("Ошибка загрузки контрагентов: " + (e?.message || e));
     }
   });
 
-  // Counterparty: show on focus
   cpInput.addEventListener("focus", () => {
-    const m = managerSel.value.trim();
-    if (!m) { setErr("Сначала выбери менеджера"); return; }
-    renderList(cpList, filterCounterpartiesLocal(cpInput.value), (r) => {
-      selectedCp = r;
-      cpInput.value = r.name;
-      cpInput.dataset.cpid = r.id || "";
-      hide(cpList);
-    });
+    if (!managerTag) return;
+    renderCpSuggest(cpInput.value);
+  });
+  cpInput.addEventListener("input", () => {
+    if (!managerTag) return;
+    renderCpSuggest(cpInput.value);
   });
 
-  // Counterparty: type filter
-  cpInput.addEventListener("input", () => {
-    renderList(cpList, filterCounterpartiesLocal(cpInput.value), (r) => {
-      selectedCp = r;
-      cpInput.value = r.name;
-      cpInput.dataset.cpid = r.id || "";
-      hide(cpList);
+  if (prodInput) {
+    prodInput.addEventListener("focus", async () => {
+      // при клике показать список даже без ввода
+      try { await renderProdSuggest(""); } catch(e){ /* ignore */ }
     });
-  });
+    prodInput.addEventListener("input", () => {
+      clearTimeout(prodDebounce);
+      prodDebounce = setTimeout(async () => {
+        try { await renderProdSuggest(prodInput.value); } catch(e){ /* ignore */ }
+      }, 250);
+    });
+  }
 
   document.addEventListener("click", (e) => {
-    if (!cpList.contains(e.target) && e.target !== cpInput) hide(cpList);
-    if (!prodList.contains(e.target) && e.target !== prodInput) hide(prodList);
+    if (!cpSuggest.contains(e.target) && e.target !== cpInput) closeSuggest(cpSuggest);
+    if (prodSuggest && !prodSuggest.contains(e.target) && e.target !== prodInput) closeSuggest(prodSuggest);
   });
-
-  // Products search
-  async function searchProducts(q, forceTop = false) {
-    const s = (q || "").trim();
-
-    if (!forceTop && s.length < 2) { hide(prodList); return; }
-
-    if (prodAbort) prodAbort.abort();
-    prodAbort = new AbortController();
-
-    try {
-      const url = forceTop
-        ? `${API_BASE}/ms/products?limit=30`
-        : `${API_BASE}/ms/products?search=${encodeURIComponent(s)}&limit=30`;
-
-      const r = await fetch(url, { signal: prodAbort.signal });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
-
-      // ДЕДУП по названию
-      const rows = (j.rows || []);
-      const seen = new Set();
-      const uniq = [];
-      for (const it of rows) {
-        const name = (it.name || "").trim();
-        const key = name.toLowerCase();
-        if (!name || seen.has(key)) continue;
-        seen.add(key);
-        uniq.push(it);
-      }
-
-      lastProdResults = uniq;
-      renderList(
-        prodList,
-        uniq.map(x => ({ name: x.name, id: x.id, article: x.article })),
-        (r) => {
-          prodInput.value = r.name;
-          prodInput.dataset.pid = r.id || "";
-          hide(prodList);
-        }
-      );
-    } catch (e) {
-      if (String(e?.name) === "AbortError") return;
-      setErr("Ошибка поиска товаров: " + (e?.message || e));
-    }
-  }
-
-  // show list on focus: top-30 if empty
-  prodInput.addEventListener("focus", () => {
-    const v = prodInput.value.trim();
-    if (v.length >= 2) searchProducts(v, false);
-    else searchProducts("", true);
-  });
-
-  // search on type
-  prodInput.addEventListener("input", () => {
-    const v = prodInput.value.trim();
-    if (v.length >= 2) searchProducts(v, false);
-    else searchProducts("", true);
-  });
-
-  function updateItemsInfo() {
-    const totalQty = items.reduce((a, x) => a + (Number(x.qty)||0), 0);
-    itemsInfo.textContent = `Позиции: ${items.length}, сумма qty: ${totalQty}`;
-  }
 
   addItemBtn?.addEventListener("click", () => {
-    setErr("");
-    const pName = prodInput.value.trim();
-    const pId = prodInput.dataset.pid || null;
-    const q = Number(qtyInput.value);
+    hideMsg();
+    const name = (prodInput.value || "").trim();
+    const qty = Number(qtyInput.value || 0);
 
-    if (!pName) { setErr("Выбери товар"); return; }
-    if (!q || q <= 0) { setErr("Укажи количество"); return; }
+    if (!name) return showError("Выбери товар.");
+    if (!qty || qty <= 0) return showError("Укажи количество.");
 
-    items.push({ product_id: pId, product_name: pName, qty: q });
+    items.push({
+      product_id: prodInput.dataset.id || null,
+      product_name: name,
+      qty: qty
+    });
+
+    // reset fields
     prodInput.value = "";
-    prodInput.dataset.pid = "";
+    prodInput.dataset.id = "";
     qtyInput.value = "";
-    updateItemsInfo();
+    prodSelectedId = "";
+    prodSelectedName = "";
+    updateItemsUI();
+    showOk("Позиция добавлена ✅");
   });
 
   clearItemsBtn?.addEventListener("click", () => {
     items = [];
-    updateItemsInfo();
+    updateItemsUI();
+    hideMsg();
   });
 
-  function buildPayload() {
-    const manager_name = managerSel.value.trim();
-    const date = docDate.value;
+  sendBtn.addEventListener("click", () => {
+    hideMsg();
+    const manager = managerSelect.value || "";
+    const date = docDate.value || "";
+    const cpName = (cpInput.value || "").trim();
 
-    if (!manager_name) throw new Error("Выбери менеджера");
-    if (!date) throw new Error("Дата не выбрана");
-
-    const cp = selectedCp || (
-      cpInput.value.trim()
-        ? { id: cpInput.dataset.cpid || null, name: cpInput.value.trim() }
-        : null
-    );
-
-    const tg_user_id = tg?.initDataUnsafe?.user?.id || null;
+    if (!manager) return showError("Выбери менеджера.");
+    if (!date) return showError("Укажи дату.");
+    if (!cpName) return showError("Выбери/введи контрагента.");
 
     if (mode === "money") {
-      const amt = Number(amount.value);
-      if (!amt || amt <= 0) throw new Error("Укажи сумму");
-      return {
+      const amountStr = (moneyAmount.value || "").trim();
+      const amountDigits = amountStr.replace(/\s+/g, "");
+      const amount = Number(amountDigits || 0);
+      if (!amount || amount <= 0) return showError("Укажи сумму возврата долга.");
+
+      const payload = {
         kind: "money",
-        manager_name,
+        manager_name: manager,
         doc_date: date,
-        amount: amt,
-        counterparty_id: cp?.id || null,
-        counterparty_name: cp?.name || null,
-        note: (noteMoney.value || "").trim(),
-        tg_user_id
+        counterparty_id: cpInput.dataset.id || null,
+        counterparty_name: cpName,
+        amount: amount,
+        note: (note.value || "").trim()
       };
+
+      if (tg) {
+        tg.sendData(JSON.stringify(payload));
+        tg.close();
+      } else {
+        console.log(payload);
+        showOk("sendData недоступен (не Telegram).");
+      }
+      return;
     }
 
     // order
-    if (!items.length) throw new Error("Добавь хотя бы одну позицию товара");
-    return {
+    if (!items.length) return showError("Добавь хотя бы 1 позицию.");
+
+    const payload = {
       kind: "order",
-      manager_name,
+      manager_name: manager,
       doc_date: date,
-      counterparty_id: cp?.id || null,
-      counterparty_name: cp?.name || null,
-      items,
-      note: (noteOrder.value || "").trim(),
-      tg_user_id
+      counterparty_id: cpInput.dataset.id || null,
+      counterparty_name: cpName,
+      items: items,
+      note: (note.value || "").trim()
     };
-  }
 
-  async function send() {
-    setErr("");
-    try {
-      const payload = buildPayload();
-
-      // Отправляем в бота через Telegram sendData (надежно для WebApp)
-      if (tg) {
-        tg.sendData(JSON.stringify(payload));
-      } else {
-        // fallback (если открыть не в Telegram)
-        const r = await fetch(API_BASE + "/submit", {
-          method: "POST",
-          headers: { "Content-Type":"application/json" },
-          body: JSON.stringify(payload)
-        });
-        const j = await r.json().catch(()=> ({}));
-        if (!r.ok) throw new Error(j.detail || "Failed to fetch");
-        alert("Отправлено ✅");
-      }
-    } catch (e) {
-      setErr("Ошибка: " + (e.message || e));
+    if (tg) {
+      tg.sendData(JSON.stringify(payload));
+      tg.close();
+    } else {
+      console.log(payload);
+      showOk("sendData недоступен (не Telegram).");
     }
-  }
+  });
 
-  sendBtn.addEventListener("click", send);
-
-  // auto open list if already manager chosen (optional)
-  updateItemsInfo();
+  // init
+  loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
+  updateItemsUI();
 </script>
 </body>
 </html>
+
