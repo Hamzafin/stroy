@@ -1,359 +1,410 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Stroy WebApp</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root { --bg:#0b1220; --card:#0f1b33; --txt:#e7eefc; --mut:#8aa0c6; --line:rgba(255,255,255,.08); --btn:#2b6fff; }
-    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-    body{margin:0;background:var(--bg);color:var(--txt);padding:16px}
-    h1{margin:6px 0 2px;text-align:center;font-size:22px}
-    .sub{margin:0 0 14px;text-align:center;color:var(--mut);font-size:13px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:10px 0}
-    label{display:block;color:var(--mut);font-size:12px;margin:10px 0 6px}
-    select,input,textarea{width:100%;background:#0b1630;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:15px;outline:none}
-    textarea{min-height:72px;resize:vertical}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .hint{color:var(--mut);font-size:12px;margin-top:8px}
-    .list{border:1px solid var(--line);border-radius:12px;margin-top:8px;max-height:220px;overflow:auto;background:#081226}
-    .item{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
-    .item:last-child{border-bottom:none}
-    .item:hover{background:rgba(255,255,255,.05)}
-    .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--mut);font-size:12px}
-    .itemsBox{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
-    .itRow{display:grid;grid-template-columns:1fr 90px 36px;gap:8px;align-items:center;margin:8px 0}
-    .x{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:10px;height:38px;cursor:pointer}
-    .btn{width:100%;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;background:var(--btn);color:white;margin-top:12px}
-    .err{color:#ff6b6b;font-size:13px;margin-top:10px;white-space:pre-wrap}
-    .ok{color:#67e8a7;font-size:13px;margin-top:10px}
-    .hidden{display:none}
+    :root { --bg:#0f172a; --card:#111827; --text:#e5e7eb; --muted:#94a3b8; --line:#1f2937; --btn:#2563eb; --btn2:#16a34a; --err:#ef4444; }
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); color:var(--text); padding:14px; }
+    h1 { font-size:18px; margin:0 0 10px; text-align:center; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; }
+    label { display:block; font-size:12px; color:var(--muted); margin-top:10px; }
+    input, select, textarea { width:100%; padding:10px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); outline:none; }
+    textarea{ min-height:70px; resize:vertical; }
+    .row { display:flex; gap:10px; }
+    .row > div { flex:1; }
+    .listbox { position:relative; }
+    .dropdown { position:absolute; left:0; right:0; top:100%; z-index:50; background:#0b1220; border:1px solid var(--line); border-radius:12px; margin-top:6px; max-height:240px; overflow:auto; display:none; }
+    .opt { padding:10px; border-bottom:1px solid #0f172a; cursor:pointer; }
+    .opt:hover { background:#111b33; }
+    .muted { color:var(--muted); font-size:12px; }
+    .err { color:var(--err); font-size:12px; margin-top:8px; white-space:pre-wrap; }
+    .btn { margin-top:14px; width:100%; padding:12px; border-radius:14px; border:0; color:white; background:var(--btn2); font-weight:700; cursor:pointer; }
+    .items { margin-top:10px; border-top:1px dashed var(--line); padding-top:10px; }
+    .itemRow { display:flex; gap:10px; margin-top:10px; align-items:center; }
+    .itemRow input { flex:1; }
+    .smallBtn { padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:#0b1220; color:var(--text); cursor:pointer; }
   </style>
 </head>
 <body>
-  <h1>Stroy WebApp</h1>
-  <p class="sub" id="subtitle">Заявка → отправка в группы</p>
+  <h1 id="title">Форма</h1>
 
   <div class="card">
-    <label>Менеджер</label>
-    <select id="manager">
-      <option value="булат">Булат</option>
-      <option value="магомед">Магомед</option>
-      <option value="амир">Амир</option>
-      <option value="шамиль">Шамиль</option>
-    </select>
-
-    <label>Дата</label>
-    <input id="docDate" type="date" />
+    <div class="row">
+      <div>
+        <label>Менеджер</label>
+        <select id="manager">
+          <option value="">— выбери —</option>
+          <option value="булат">Булат</option>
+          <option value="менеджер2">Менеджер 2</option>
+          <option value="менеджер3">Менеджер 3</option>
+          <option value="менеджер4">Менеджер 4</option>
+        </select>
+      </div>
+      <div>
+        <label>Дата</label>
+        <input id="docDate" type="date" />
+      </div>
+    </div>
 
     <label>Контрагент</label>
-    <input id="cpInput" placeholder="Начни вводить имя контрагента..." autocomplete="off" />
-    <div class="hint" id="cpChosen">Не выбран</div>
-    <div class="list hidden" id="cpList"></div>
+    <div class="listbox">
+      <input id="cpInput" type="text" placeholder="начни вводить или просто нажми" autocomplete="off"/>
+      <div id="cpList" class="dropdown"></div>
+    </div>
+    <div class="muted" id="cpHint"></div>
 
-    <div id="orderBlock" class="card" style="margin-top:14px">
-      <label>Товар</label>
-      <input id="prodInput" placeholder="Введи 2+ буквы товара..." autocomplete="off" />
-      <div class="list hidden" id="prodList"></div>
+    <!-- ORDER -->
+    <div id="orderBox" style="display:none">
+      <div class="items">
+        <label>Товар</label>
+        <div class="listbox">
+          <input id="prodInput" type="text" placeholder="нажми или начни вводить" autocomplete="off"/>
+          <div id="prodList" class="dropdown"></div>
+        </div>
 
-      <div class="itemsBox">
-        <div class="pill" id="itemsCount">Товаров: 0</div>
-        <div id="items"></div>
+        <label>Количество</label>
+        <input id="qtyInput" type="number" min="0.01" step="0.01" placeholder="например: 3" />
+
+        <div class="itemRow">
+          <button class="smallBtn" id="addItemBtn" type="button">+ Добавить позицию</button>
+          <button class="smallBtn" id="clearItemsBtn" type="button">Очистить</button>
+        </div>
+
+        <div class="muted" id="itemsInfo"></div>
       </div>
 
       <label>Комментарий</label>
-      <textarea id="orderNote" placeholder="например: срочно / доставка / адрес..."></textarea>
+      <textarea id="noteOrder" placeholder="комментарий (не обязательно)"></textarea>
     </div>
 
-    <div id="moneyBlock" class="card hidden" style="margin-top:14px">
-      <div class="row">
-        <div>
-          <label>Тип</label>
-          <select id="direction">
-            <option value="приход">Приход</option>
-            <option value="расход">Расход</option>
-          </select>
-        </div>
-        <div>
-          <label>Сумма</label>
-          <input id="amount" type="number" inputmode="decimal" placeholder="например: 15000" />
-        </div>
-      </div>
+    <!-- MONEY -->
+    <div id="moneyBox" style="display:none">
+      <label>Сумма (возврат долга)</label>
+      <input id="amount" type="number" min="0.01" step="0.01" placeholder="например: 15000" />
 
       <label>Комментарий</label>
-      <textarea id="moneyNote" placeholder="например: оплата наличными / перевод / за доставку..."></textarea>
+      <textarea id="noteMoney" placeholder="комментарий (не обязательно)"></textarea>
     </div>
 
-    <button class="btn" id="sendBtn">Отправить</button>
-    <div class="err" id="err"></div>
-    <div class="ok" id="ok"></div>
+    <button class="btn" id="sendBtn">Отправить в бот</button>
+    <div class="err" id="errBox"></div>
   </div>
 
 <script>
   const tg = window.Telegram?.WebApp;
   if (tg) tg.ready();
 
-  const API = "https://api.stroybote.ru";
+  const API_BASE = "https://api.stroybote.ru";
 
-  const qs = new URLSearchParams(location.search);
-  const mode = (qs.get("mode") || "order").toLowerCase(); // order | money
-
-  const subtitle = document.getElementById("subtitle");
-  const orderBlock = document.getElementById("orderBlock");
-  const moneyBlock = document.getElementById("moneyBlock");
-  const sendBtn = document.getElementById("sendBtn");
-
-  subtitle.textContent = mode === "money"
-    ? "Деньги → отправка в группу менеджеров"
-    : "Заявка → отправка в группы";
-
-  orderBlock.classList.toggle("hidden", mode === "money");
-  moneyBlock.classList.toggle("hidden", mode !== "money");
-  sendBtn.textContent = mode === "money" ? "Отправить" : "Отправить заявку";
-
-  // date today
-  const docDate = document.getElementById("docDate");
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth()+1).padStart(2,'0');
-  const dd = String(today.getDate()).padStart(2,'0');
-  docDate.value = `${yyyy}-${mm}-${dd}`;
-
+  const mode = new URLSearchParams(location.search).get("mode") || "order";
+  const title = document.getElementById("title");
   const managerSel = document.getElementById("manager");
+  const docDate = document.getElementById("docDate");
+
   const cpInput = document.getElementById("cpInput");
   const cpList = document.getElementById("cpList");
-  const cpChosen = document.getElementById("cpChosen");
+  const cpHint = document.getElementById("cpHint");
+
+  const orderBox = document.getElementById("orderBox");
+  const moneyBox = document.getElementById("moneyBox");
 
   const prodInput = document.getElementById("prodInput");
   const prodList = document.getElementById("prodList");
-  const itemsBox = document.getElementById("items");
-  const itemsCount = document.getElementById("itemsCount");
+  const qtyInput = document.getElementById("qtyInput");
+  const addItemBtn = document.getElementById("addItemBtn");
+  const clearItemsBtn = document.getElementById("clearItemsBtn");
+  const itemsInfo = document.getElementById("itemsInfo");
+  const noteOrder = document.getElementById("noteOrder");
 
-  const direction = document.getElementById("direction");
   const amount = document.getElementById("amount");
+  const noteMoney = document.getElementById("noteMoney");
 
-  const orderNote = document.getElementById("orderNote");
-  const moneyNote = document.getElementById("moneyNote");
+  const sendBtn = document.getElementById("sendBtn");
+  const errBox = document.getElementById("errBox");
 
-  const err = document.getElementById("err");
-  const ok = document.getElementById("ok");
+  // date default today
+  const today = new Date();
+  docDate.value = today.toISOString().slice(0,10);
 
-  let cpAll = [];            // контрагенты менеджера (кэш)
-  let cpSelected = null;     // {id,name}
-  let items = [];            // [{product_id, product_name, qty}]
-
-  function setErr(t){ err.textContent = t || ""; ok.textContent = ""; }
-  function setOk(t){ ok.textContent = t || ""; err.textContent = ""; }
-
-  function show(el){ el.classList.remove("hidden"); }
-  function hide(el){ el.classList.add("hidden"); }
-
-  async function fetchJSON(url){
-    const r = await fetch(url, { method:"GET" });
-    const txt = await r.text();
-    if (!r.ok) throw new Error(txt || `HTTP ${r.status}`);
-    return JSON.parse(txt);
+  // mode UI
+  if (mode === "money") {
+    title.textContent = "Деньги";
+    moneyBox.style.display = "block";
+  } else {
+    title.textContent = "Заявка";
+    orderBox.style.display = "block";
   }
 
-  // ---- Counterparties: prefetch on manager change ----
-  async function loadCounterpartiesForManager(){
-    setErr("");
-    cpSelected = null;
-    cpChosen.textContent = "Не выбран";
-    cpInput.value = "";
-    hide(cpList);
+  // state
+  let cpRows = [];
+  let selectedCp = null;
 
-    const tag = managerSel.value;
-    const url = `${API}/ms/counterparties?` + new URLSearchParams({ manager: tag, limit: "500" }).toString();
-    const data = await fetchJSON(url);
-    cpAll = (data.rows || []).map(r => ({ id:r.id, name:r.name }));
-  }
+  let lastProdResults = [];
+  let prodAbort = null;
+  let cpAbort = null;
 
-  function renderCpList(query){
-    const q = (query || "").trim().toLowerCase();
-    const list = q
-      ? cpAll.filter(x => x.name.toLowerCase().includes(q)).slice(0, 30)
-      : cpAll.slice(0, 30);
+  let items = []; // {product_id, product_name, qty}
 
-    cpList.innerHTML = "";
-    if (!list.length){ hide(cpList); return; }
+  function setErr(msg) { errBox.textContent = msg || ""; }
+  function show(el) { el.style.display = "block"; }
+  function hide(el) { el.style.display = "none"; }
 
-    list.forEach(x => {
+  function renderList(container, rows, onPick) {
+    container.innerHTML = "";
+    if (!rows.length) {
+      container.innerHTML = `<div class="opt muted">ничего не найдено</div>`;
+      show(container);
+      return;
+    }
+    rows.forEach(r => {
       const div = document.createElement("div");
-      div.className = "item";
-      div.textContent = x.name;
-      div.onclick = () => {
-        cpSelected = x;
-        cpInput.value = x.name;
-        cpChosen.textContent = `Выбран: ${x.name} (${managerSel.options[managerSel.selectedIndex].text})`;
-        hide(cpList);
-      };
-      cpList.appendChild(div);
+      div.className = "opt";
+      div.textContent = r.name;
+      div.onclick = () => onPick(r);
+      container.appendChild(div);
     });
-    show(cpList);
+    show(container);
   }
 
+  async function loadCounterparties(manager, search=null) {
+    if (!manager) return;
+    if (cpAbort) cpAbort.abort();
+    cpAbort = new AbortController();
+
+    const url = new URL(API_BASE + "/ms/counterparties");
+    url.searchParams.set("manager", manager);
+    url.searchParams.set("limit", "1000");
+    if (search) url.searchParams.set("search", search);
+
+    const r = await fetch(url.toString(), { signal: cpAbort.signal });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
+    cpRows = j.rows || [];
+  }
+
+  function filterCounterpartiesLocal(q) {
+    const s = (q||"").trim().toLowerCase();
+    if (!s) return cpRows.slice(0, 30);
+    const res = cpRows.filter(x => (x.name||"").toLowerCase().includes(s));
+    return res.slice(0, 30);
+  }
+
+  // Counterparty: auto load on manager select
   managerSel.addEventListener("change", async () => {
-    try{
-      await loadCounterpartiesForManager();
-      setOk("Контрагенты подгружены.");
-    }catch(e){
-      setErr("Ошибка загрузки контрагентов: " + e.message);
+    setErr("");
+    selectedCp = null;
+    cpInput.value = "";
+    cpInput.dataset.cpid = "";
+    cpHint.textContent = "";
+
+    const m = managerSel.value.trim();
+    if (!m) return;
+
+    try {
+      cpHint.textContent = "Загружаю контрагентов...";
+      await loadCounterparties(m);
+      cpHint.textContent = `Загружено: ${cpRows.length}`;
+      // сразу показать список при выборе менеджера (топ-30)
+      renderList(cpList, filterCounterpartiesLocal(""), (r) => {
+        selectedCp = r;
+        cpInput.value = r.name;
+        cpInput.dataset.cpid = r.id || "";
+        hide(cpList);
+      });
+    } catch (e) {
+      cpHint.textContent = "";
+      setErr("Ошибка загрузки контрагентов: " + (e.message || e));
     }
   });
 
-  cpInput.addEventListener("focus", () => renderCpList(cpInput.value));
-  cpInput.addEventListener("input", () => renderCpList(cpInput.value));
+  // Counterparty: show on focus
+  cpInput.addEventListener("focus", () => {
+    const m = managerSel.value.trim();
+    if (!m) { setErr("Сначала выбери менеджера"); return; }
+    renderList(cpList, filterCounterpartiesLocal(cpInput.value), (r) => {
+      selectedCp = r;
+      cpInput.value = r.name;
+      cpInput.dataset.cpid = r.id || "";
+      hide(cpList);
+    });
+  });
+
+  // Counterparty: type filter
+  cpInput.addEventListener("input", () => {
+    renderList(cpList, filterCounterpartiesLocal(cpInput.value), (r) => {
+      selectedCp = r;
+      cpInput.value = r.name;
+      cpInput.dataset.cpid = r.id || "";
+      hide(cpList);
+    });
+  });
+
   document.addEventListener("click", (e) => {
     if (!cpList.contains(e.target) && e.target !== cpInput) hide(cpList);
-  });
-
-  // ---- Products: search on demand (2+ chars) ----
-  let prodTimer = null;
-  async function searchProducts(q){
-    const query = (q||"").trim();
-    if (query.length < 2){ hide(prodList); prodList.innerHTML=""; return; }
-    const url = `${API}/ms/products?` + new URLSearchParams({ search: query, limit:"30" }).toString();
-    const data = await fetchJSON(url);
-
-    const rows = data.rows || [];
-    // frontend dedupe safety
-    const seen = new Set();
-    const uniq = [];
-    for (const r of rows){
-      const name = (r.name||"").trim();
-      const key = name.toLowerCase();
-      if (!name || seen.has(key)) continue;
-      seen.add(key);
-      uniq.push(r);
-    }
-
-    prodList.innerHTML = "";
-    if (!uniq.length){ hide(prodList); return; }
-
-    uniq.forEach(r => {
-      const div = document.createElement("div");
-      div.className = "item";
-      div.textContent = r.name;
-      div.onclick = () => {
-        addItem({ product_id: r.id, product_name: r.name, qty: 1 });
-        prodInput.value = "";
-        hide(prodList);
-      };
-      prodList.appendChild(div);
-    });
-    show(prodList);
-  }
-
-  prodInput?.addEventListener("input", () => {
-    clearTimeout(prodTimer);
-    prodTimer = setTimeout(() => searchProducts(prodInput.value), 250);
-  });
-  prodInput?.addEventListener("focus", () => {
-    if (prodInput.value.trim().length >= 2) searchProducts(prodInput.value);
-  });
-  document.addEventListener("click", (e) => {
     if (!prodList.contains(e.target) && e.target !== prodInput) hide(prodList);
   });
 
-  function addItem(it){
-    // если уже есть такой товар — просто увеличим qty
-    const idx = items.findIndex(x => (x.product_name||"").toLowerCase() === it.product_name.toLowerCase());
-    if (idx >= 0){
-      items[idx].qty = Number(items[idx].qty) + Number(it.qty);
-    } else {
-      items.push(it);
+  // Products search
+  async function searchProducts(q, forceTop = false) {
+    const s = (q || "").trim();
+
+    if (!forceTop && s.length < 2) { hide(prodList); return; }
+
+    if (prodAbort) prodAbort.abort();
+    prodAbort = new AbortController();
+
+    try {
+      const url = forceTop
+        ? `${API_BASE}/ms/products?limit=30`
+        : `${API_BASE}/ms/products?search=${encodeURIComponent(s)}&limit=30`;
+
+      const r = await fetch(url, { signal: prodAbort.signal });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.detail || `HTTP ${r.status}`);
+
+      // ДЕДУП по названию
+      const rows = (j.rows || []);
+      const seen = new Set();
+      const uniq = [];
+      for (const it of rows) {
+        const name = (it.name || "").trim();
+        const key = name.toLowerCase();
+        if (!name || seen.has(key)) continue;
+        seen.add(key);
+        uniq.push(it);
+      }
+
+      lastProdResults = uniq;
+      renderList(
+        prodList,
+        uniq.map(x => ({ name: x.name, id: x.id, article: x.article })),
+        (r) => {
+          prodInput.value = r.name;
+          prodInput.dataset.pid = r.id || "";
+          hide(prodList);
+        }
+      );
+    } catch (e) {
+      if (String(e?.name) === "AbortError") return;
+      setErr("Ошибка поиска товаров: " + (e?.message || e));
     }
-    renderItems();
   }
 
-  function renderItems(){
-    itemsBox.innerHTML = "";
-    itemsCount.textContent = `Товаров: ${items.length}`;
-
-    items.forEach((it, i) => {
-      const row = document.createElement("div");
-      row.className = "itRow";
-
-      const name = document.createElement("div");
-      name.textContent = it.product_name;
-
-      const qty = document.createElement("input");
-      qty.type = "number";
-      qty.value = it.qty;
-      qty.min = "1";
-      qty.oninput = () => { items[i].qty = Number(qty.value || 1); };
-
-      const del = document.createElement("button");
-      del.className = "x";
-      del.textContent = "✕";
-      del.onclick = () => { items.splice(i,1); renderItems(); };
-
-      row.appendChild(name);
-      row.appendChild(qty);
-      row.appendChild(del);
-      itemsBox.appendChild(row);
-    });
-  }
-
-  // initial load counterparties for default manager
-  loadCounterpartiesForManager().catch(()=>{});
-
-  // ---- SEND: only sendData (no fetch) ----
-  sendBtn.addEventListener("click", async () => {
-    try{
-      setErr("");
-
-      const manager = managerSel.value;
-      const date = docDate.value;
-
-      if (!cpSelected) throw new Error("Выбери контрагента из подсказок.");
-
-      const payload = {
-        kind: mode === "money" ? "money" : "order",
-        manager_name: manager,
-        date,
-        counterparty_id: cpSelected.id,
-        counterparty_name: cpSelected.name,
-        note: mode === "money" ? (moneyNote.value || "") : (orderNote.value || ""),
-      };
-
-      if (mode === "money"){
-        const a = Number(amount.value || 0);
-        if (!(a > 0)) throw new Error("Укажи сумму (>0).");
-        payload.amount = a;
-        payload.direction = direction.value;
-      } else {
-        if (!items.length) throw new Error("Добавь хотя бы 1 товар.");
-        payload.items = items.map(x => ({
-          product_id: x.product_id || null,
-          product_name: x.product_name,
-          qty: Number(x.qty || 1)
-        }));
-      }
-
-      if (!tg){
-        throw new Error("Открой WebApp внутри Telegram (кнопкой в боте).");
-      }
-
-      tg.sendData(JSON.stringify(payload));
-      setOk("Отправлено в Telegram ✅");
-
-      // очистим форму после отправки
-      if (mode === "money"){
-        amount.value = "";
-        moneyNote.value = "";
-      } else {
-        items = [];
-        renderItems();
-        orderNote.value = "";
-      }
-      // контрагента оставим выбранным — чтобы быстрее делать много заявок
-    }catch(e){
-      setErr("Ошибка: " + e.message);
-    }
+  // show list on focus: top-30 if empty
+  prodInput.addEventListener("focus", () => {
+    const v = prodInput.value.trim();
+    if (v.length >= 2) searchProducts(v, false);
+    else searchProducts("", true);
   });
+
+  // search on type
+  prodInput.addEventListener("input", () => {
+    const v = prodInput.value.trim();
+    if (v.length >= 2) searchProducts(v, false);
+    else searchProducts("", true);
+  });
+
+  function updateItemsInfo() {
+    const totalQty = items.reduce((a, x) => a + (Number(x.qty)||0), 0);
+    itemsInfo.textContent = `Позиции: ${items.length}, сумма qty: ${totalQty}`;
+  }
+
+  addItemBtn?.addEventListener("click", () => {
+    setErr("");
+    const pName = prodInput.value.trim();
+    const pId = prodInput.dataset.pid || null;
+    const q = Number(qtyInput.value);
+
+    if (!pName) { setErr("Выбери товар"); return; }
+    if (!q || q <= 0) { setErr("Укажи количество"); return; }
+
+    items.push({ product_id: pId, product_name: pName, qty: q });
+    prodInput.value = "";
+    prodInput.dataset.pid = "";
+    qtyInput.value = "";
+    updateItemsInfo();
+  });
+
+  clearItemsBtn?.addEventListener("click", () => {
+    items = [];
+    updateItemsInfo();
+  });
+
+  function buildPayload() {
+    const manager_name = managerSel.value.trim();
+    const date = docDate.value;
+
+    if (!manager_name) throw new Error("Выбери менеджера");
+    if (!date) throw new Error("Дата не выбрана");
+
+    const cp = selectedCp || (
+      cpInput.value.trim()
+        ? { id: cpInput.dataset.cpid || null, name: cpInput.value.trim() }
+        : null
+    );
+
+    const tg_user_id = tg?.initDataUnsafe?.user?.id || null;
+
+    if (mode === "money") {
+      const amt = Number(amount.value);
+      if (!amt || amt <= 0) throw new Error("Укажи сумму");
+      return {
+        kind: "money",
+        manager_name,
+        doc_date: date,
+        amount: amt,
+        counterparty_id: cp?.id || null,
+        counterparty_name: cp?.name || null,
+        note: (noteMoney.value || "").trim(),
+        tg_user_id
+      };
+    }
+
+    // order
+    if (!items.length) throw new Error("Добавь хотя бы одну позицию товара");
+    return {
+      kind: "order",
+      manager_name,
+      doc_date: date,
+      counterparty_id: cp?.id || null,
+      counterparty_name: cp?.name || null,
+      items,
+      note: (noteOrder.value || "").trim(),
+      tg_user_id
+    };
+  }
+
+  async function send() {
+    setErr("");
+    try {
+      const payload = buildPayload();
+
+      // Отправляем в бота через Telegram sendData (надежно для WebApp)
+      if (tg) {
+        tg.sendData(JSON.stringify(payload));
+      } else {
+        // fallback (если открыть не в Telegram)
+        const r = await fetch(API_BASE + "/submit", {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json().catch(()=> ({}));
+        if (!r.ok) throw new Error(j.detail || "Failed to fetch");
+        alert("Отправлено ✅");
+      }
+    } catch (e) {
+      setErr("Ошибка: " + (e.message || e));
+    }
+  }
+
+  sendBtn.addEventListener("click", send);
+
+  // auto open list if already manager chosen (optional)
+  updateItemsInfo();
 </script>
 </body>
 </html>
