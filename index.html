@@ -109,6 +109,17 @@
       font-weight:800;
     }
     .muted{color:#94a3b8;font-size:12px}
+
+    /* NEW: qty + unit row */
+    .qty-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+    #qtyUnit{
+      width:140px;
+      flex:0 0 140px;
+    }
   </style>
 </head>
 <body>
@@ -149,9 +160,24 @@
         </div>
         <div>
           <label>Количество</label>
-          <input id="qtyInput" type="number" step="1" min="1" placeholder="например: 3">
+          <div class="qty-row">
+            <input id="qtyInput" type="number" step="1" min="1" placeholder="например: 3">
+            <select id="qtyUnit">
+              <option value="шт" selected>шт</option>
+              <option value="короб">короб</option>
+              <option value="поддон">поддон</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      <!-- NEW: truck type before comment -->
+      <label style="margin-top:12px">Тип фуры</label>
+      <select id="truckType">
+        <option value="">— выбери —</option>
+        <option value="10т">10т</option>
+        <option value="20т">20т</option>
+      </select>
 
       <div class="row" style="margin-top:10px">
         <button class="btn2" id="addItemBtn" type="button">+ Добавить позицию</button>
@@ -180,7 +206,7 @@
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  const API_BASE = "https://api.stroybote.ru"; // если поменяешь домен — меняй тут
+  const API_BASE = "https://api.stroybote.ru";
   const params = new URLSearchParams(location.search);
   const mode = (params.get("mode") || "order").toLowerCase(); // order | money
 
@@ -198,6 +224,8 @@
   const prodInput = document.getElementById("prodInput");
   const prodSuggest = document.getElementById("prodSuggest");
   const qtyInput = document.getElementById("qtyInput");
+  const qtyUnit = document.getElementById("qtyUnit");
+  const truckType = document.getElementById("truckType");
 
   const addItemBtn = document.getElementById("addItemBtn");
   const clearItemsBtn = document.getElementById("clearItemsBtn");
@@ -233,9 +261,8 @@
   let cpSelectedId = "";
   let cpSelectedName = "";
 
-  let items = []; // {product_id, product_name, qty}
-  let prodSelectedId = "";
-  let prodSelectedName = "";
+  // items: [{product_name, qty, unit}]
+  let items = [];
 
   function showError(text) {
     msg.className = "err";
@@ -318,14 +345,25 @@
     openSuggest(cpSuggest);
   }
 
-  // --- products (search endpoint, show list on focus) ---
+  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
     const url = `${API_BASE}/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`;
     const r = await fetch(url);
     const j = await r.json();
-    return (j.rows || []).map(x => ({id: x.id || "", name: x.name || ""})).filter(x => x.name);
+    // защита от дублей по имени
+    const seen = new Set();
+    const out = [];
+    for (const x of (j.rows || [])) {
+      const name = (x?.name || "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({name});
+    }
+    return out;
   }
 
   async function renderProdSuggest(searchText="") {
@@ -336,10 +374,7 @@
       div.className = "item";
       div.textContent = x.name;
       div.onclick = () => {
-        prodSelectedId = x.id;
-        prodSelectedName = x.name;
         prodInput.value = x.name;
-        prodInput.dataset.id = x.id || "";
         closeSuggest(prodSuggest);
       };
       prodSuggest.appendChild(div);
@@ -364,9 +399,10 @@
     itemsBox.style.display = "block";
     itemsBox.innerHTML = "";
     items.forEach((it, idx) => {
+      const unit = it.unit || "шт";
       const row = document.createElement("div");
       row.className = "line";
-      row.innerHTML = `<div>${idx+1}) ${it.product_name} — <b>${it.qty}</b></div>`;
+      row.innerHTML = `<div>${idx+1}) ${it.product_name} — <b>${it.qty} ${unit}</b></div>`;
       const btn = document.createElement("button");
       btn.className = "x";
       btn.type = "button";
@@ -389,8 +425,7 @@
 
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
-      const v = formatSpacesDigits(moneyAmount.value);
-      moneyAmount.value = v;
+      moneyAmount.value = formatSpacesDigits(moneyAmount.value);
     });
   }
 
@@ -421,7 +456,6 @@
 
   if (prodInput) {
     prodInput.addEventListener("focus", async () => {
-      // при клике показать список даже без ввода
       try { await renderProdSuggest(""); } catch(e){ /* ignore */ }
     });
     prodInput.addEventListener("input", () => {
@@ -441,22 +475,19 @@
     hideMsg();
     const name = (prodInput.value || "").trim();
     const qty = Number(qtyInput.value || 0);
+    const unit = (qtyUnit?.value || "шт").trim();
 
     if (!name) return showError("Выбери товар.");
     if (!qty || qty <= 0) return showError("Укажи количество.");
 
     items.push({
-      product_id: prodInput.dataset.id || null,
       product_name: name,
-      qty: qty
+      qty: qty,
+      unit: unit
     });
 
-    // reset fields
     prodInput.value = "";
-    prodInput.dataset.id = "";
     qtyInput.value = "";
-    prodSelectedId = "";
-    prodSelectedName = "";
     updateItemsUI();
     showOk("Позиция добавлена ✅");
   });
@@ -472,6 +503,7 @@
     const manager = managerSelect.value || "";
     const date = docDate.value || "";
     const cpName = (cpInput.value || "").trim();
+    const truck = (truckType?.value || "").trim();
 
     if (!manager) return showError("Выбери менеджера.");
     if (!date) return showError("Укажи дату.");
@@ -505,6 +537,7 @@
 
     // order
     if (!items.length) return showError("Добавь хотя бы 1 позицию.");
+    if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
     const payload = {
       kind: "order",
@@ -512,6 +545,7 @@
       doc_date: date,
       counterparty_id: cpInput.dataset.id || null,
       counterparty_name: cpName,
+      truck_type: truck,
       items: items,
       note: (note.value || "").trim()
     };
@@ -531,4 +565,3 @@
 </script>
 </body>
 </html>
-
