@@ -110,15 +110,26 @@
     }
     .muted{color:#94a3b8;font-size:12px}
 
-    /* NEW: qty + unit row */
+    /* NEW: qty + unit row (ТУТ ТОЛЬКО ПРАВКИ ДЛЯ ВИДИМОСТИ КОЛ-ВА) */
     .qty-row{
-      display:flex;
+      display:grid;
+      grid-template-columns: 1fr 88px; /* количество шире, тип уже */
       gap:10px;
-      align-items:center;
+      align-items:end;
+    }
+    #qtyInput{
+      padding:14px 12px;
+      font-size:18px;
+      text-align:center;
     }
     #qtyUnit{
-      width:140px;
-      flex:0 0 140px;
+      width:100%;
+      padding:10px 8px;
+      font-size:14px;
+    }
+    @media (max-width: 420px){
+      .qty-row{ grid-template-columns: 1fr 74px; }
+      #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
   </style>
 </head>
