@@ -58,7 +58,6 @@
     .err{color:#fb7185;font-size:12px;margin-top:10px}
     .ok{color:#34d399;font-size:12px;margin-top:10px}
 
-    /* suggestions dropdown */
     .suggest-wrap{position:relative}
     .suggest{
       position:absolute; left:0; right:0; top:100%;
@@ -110,10 +109,10 @@
     }
     .muted{color:#94a3b8;font-size:12px}
 
-    /* NEW: qty + unit row (ТУТ ТОЛЬКО ПРАВКИ ДЛЯ ВИДИМОСТИ КОЛ-ВА) */
+    /* qty row visibility */
     .qty-row{
       display:grid;
-      grid-template-columns: 1fr 88px; /* количество шире, тип уже */
+      grid-template-columns: 1fr 88px;
       gap:10px;
       align-items:end;
     }
@@ -131,6 +130,18 @@
       .qty-row{ grid-template-columns: 1fr 74px; }
       #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
+
+    /* debt box */
+    .debtbox{
+      border:1px dashed rgba(148,163,184,.25);
+      border-radius:14px;
+      padding:10px 12px;
+      margin-top:10px;
+      background:#0a132b;
+      font-size:14px;
+      color:#e5e7eb;
+    }
+    .debtbox b{font-size:15px}
   </style>
 </head>
 <body>
@@ -182,7 +193,6 @@
         </div>
       </div>
 
-      <!-- NEW: truck type before comment -->
       <label style="margin-top:12px">Тип фуры</label>
       <select id="truckType">
         <option value="">— выбери —</option>
@@ -203,6 +213,12 @@
       <label>Сумма возврата долга</label>
       <input id="moneyAmount" type="text" inputmode="numeric" placeholder="например: 300 000">
       <div class="hint">Пробелы ставятся автоматически: 300 000</div>
+
+      <!-- NEW: debt info -->
+      <div id="debtBox" class="debtbox" style="display:none">
+        Долг: <b id="debtNow">—</b><br>
+        Остаток после оплаты: <b id="debtAfter">—</b>
+      </div>
     </div>
 
     <label>Комментарий (не обязательно)</label>
@@ -244,11 +260,14 @@
   const itemsStat = document.getElementById("itemsStat");
 
   const moneyAmount = document.getElementById("moneyAmount");
+  const debtBox = document.getElementById("debtBox");
+  const debtNowEl = document.getElementById("debtNow");
+  const debtAfterEl = document.getElementById("debtAfter");
+
   const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
-  // mode setup
   if (mode === "money") {
     titleEl.textContent = "Деньги";
     orderBlock.style.display = "none";
@@ -259,21 +278,18 @@
     moneyBlock.style.display = "none";
   }
 
-  // date today
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const dd = String(today.getDate()).padStart(2,'0');
   docDate.value = `${yyyy}-${mm}-${dd}`;
 
-  // state
   let managerTag = "";
-  let counterparties = []; // {id,name}
-  let cpSelectedId = "";
-  let cpSelectedName = "";
-
-  // items: [{product_name, qty, unit}]
+  let counterparties = [];
   let items = [];
+
+  // debt state
+  let debtValue = null; // number | null
 
   function showError(text) {
     msg.className = "err";
@@ -290,7 +306,11 @@
   function openSuggest(box){ box.style.display = "block"; }
   function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
 
-  // --- managers from tags ---
+  function fmtSpaces(n){
+    const x = Math.max(0, Math.floor(Number(n || 0)));
+    return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
   async function loadManagers() {
     managerSelect.innerHTML = `<option value="">— выбери —</option>`;
     const r = await fetch(`${API_BASE}/ms/managers`);
@@ -306,14 +326,13 @@
     }
   }
 
-  // --- counterparties (by manager tag) ---
   async function loadCounterpartiesByTag(tag) {
     counterparties = [];
-    cpSelectedId = "";
-    cpSelectedName = "";
     cpInput.value = "";
     cpInput.dataset.id = "";
     cpHint.textContent = "Загружаю контрагентов…";
+    debtValue = null;
+    if (debtBox) debtBox.style.display = "none";
 
     const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`;
     const r = await fetch(url);
@@ -338,12 +357,15 @@
       const div = document.createElement("div");
       div.className = "item";
       div.textContent = x.name;
-      div.onclick = () => {
-        cpSelectedId = x.id;
-        cpSelectedName = x.name;
+      div.onclick = async () => {
         cpInput.value = x.name;
         cpInput.dataset.id = x.id || "";
         closeSuggest(cpSuggest);
+
+        // NEW: load debt in money mode
+        if (mode === "money") {
+          await refreshDebt();
+        }
       };
       cpSuggest.appendChild(div);
     }
@@ -356,14 +378,12 @@
     openSuggest(cpSuggest);
   }
 
-  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
     const url = `${API_BASE}/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`;
     const r = await fetch(url);
     const j = await r.json();
-    // защита от дублей по имени
     const seen = new Set();
     const out = [];
     for (const x of (j.rows || [])) {
@@ -399,7 +419,6 @@
     openSuggest(prodSuggest);
   }
 
-  // --- items list ---
   function updateItemsUI() {
     itemsStat.textContent = `Позиции: ${items.length}`;
     if (items.length === 0) {
@@ -427,20 +446,56 @@
     });
   }
 
-  // --- money input formatting with spaces ---
   function formatSpacesDigits(raw) {
     const digits = (raw || "").replace(/\D+/g, "");
     if (!digits) return "";
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 
+  function calcDebtAfter(){
+    if (debtValue === null || debtValue === undefined) return null;
+    const amountDigits = (moneyAmount?.value || "").replace(/\s+/g, "");
+    const amount = Number(amountDigits || 0);
+    if (!amount || amount < 0) return debtValue;
+    return Math.max(0, Math.round(debtValue - amount));
+  }
+
+  async function refreshDebt(){
+    const cid = cpInput.dataset.id || "";
+    if (!cid) {
+      debtValue = null;
+      if (debtBox) debtBox.style.display = "none";
+      return;
+    }
+    try{
+      const r = await fetch(`${API_BASE}/ms/debt?counterparty_id=${encodeURIComponent(cid)}`);
+      const j = await r.json();
+      debtValue = (j && typeof j.debt === "number") ? Math.round(j.debt) : null;
+
+      if (debtValue !== null){
+        debtNowEl.textContent = fmtSpaces(debtValue);
+        const after = calcDebtAfter();
+        debtAfterEl.textContent = after === null ? "—" : fmtSpaces(after);
+        debtBox.style.display = "block";
+      } else {
+        debtBox.style.display = "none";
+      }
+    }catch(e){
+      debtValue = null;
+      debtBox.style.display = "none";
+    }
+  }
+
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
       moneyAmount.value = formatSpacesDigits(moneyAmount.value);
+      if (mode === "money" && debtValue !== null){
+        const after = calcDebtAfter();
+        debtAfterEl.textContent = after === null ? "—" : fmtSpaces(after);
+      }
     });
   }
 
-  // events
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
@@ -467,12 +522,12 @@
 
   if (prodInput) {
     prodInput.addEventListener("focus", async () => {
-      try { await renderProdSuggest(""); } catch(e){ /* ignore */ }
+      try { await renderProdSuggest(""); } catch(e){}
     });
     prodInput.addEventListener("input", () => {
       clearTimeout(prodDebounce);
       prodDebounce = setTimeout(async () => {
-        try { await renderProdSuggest(prodInput.value); } catch(e){ /* ignore */ }
+        try { await renderProdSuggest(prodInput.value); } catch(e){}
       }, 250);
     });
   }
@@ -491,11 +546,7 @@
     if (!name) return showError("Выбери товар.");
     if (!qty || qty <= 0) return showError("Укажи количество.");
 
-    items.push({
-      product_name: name,
-      qty: qty,
-      unit: unit
-    });
+    items.push({ product_name: name, qty: qty, unit: unit });
 
     prodInput.value = "";
     qtyInput.value = "";
@@ -514,7 +565,6 @@
     const manager = managerSelect.value || "";
     const date = docDate.value || "";
     const cpName = (cpInput.value || "").trim();
-    const truck = (truckType?.value || "").trim();
 
     if (!manager) return showError("Выбери менеджера.");
     if (!date) return showError("Укажи дату.");
@@ -526,6 +576,8 @@
       const amount = Number(amountDigits || 0);
       if (!amount || amount <= 0) return showError("Укажи сумму возврата долга.");
 
+      const after = calcDebtAfter();
+
       const payload = {
         kind: "money",
         manager_name: manager,
@@ -533,20 +585,17 @@
         counterparty_id: cpInput.dataset.id || null,
         counterparty_name: cpName,
         amount: amount,
+        debt_before: (typeof debtValue === "number") ? debtValue : null,
+        debt_after: (typeof after === "number") ? after : null,
         note: (note.value || "").trim()
       };
 
-      if (tg) {
-        tg.sendData(JSON.stringify(payload));
-        tg.close();
-      } else {
-        console.log(payload);
-        showOk("sendData недоступен (не Telegram).");
-      }
+      if (tg) { tg.sendData(JSON.stringify(payload)); tg.close(); }
+      else { console.log(payload); showOk("sendData недоступен (не Telegram)."); }
       return;
     }
 
-    // order
+    const truck = (truckType?.value || "").trim();
     if (!items.length) return showError("Добавь хотя бы 1 позицию.");
     if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
@@ -561,16 +610,10 @@
       note: (note.value || "").trim()
     };
 
-    if (tg) {
-      tg.sendData(JSON.stringify(payload));
-      tg.close();
-    } else {
-      console.log(payload);
-      showOk("sendData недоступен (не Telegram).");
-    }
+    if (tg) { tg.sendData(JSON.stringify(payload)); tg.close(); }
+    else { console.log(payload); showOk("sendData недоступен (не Telegram)."); }
   });
 
-  // init
   loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
   updateItemsUI();
 </script>
