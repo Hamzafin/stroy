@@ -11,6 +11,9 @@
       margin:0; padding:16px;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       background:#0b1220; color:#e5e7eb;
+      min-height: var(--app-height, 100vh);
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      overscroll-behavior: contain;
     }
     .wrap{max-width:760px;margin:0 auto}
     h1{margin:0 0 10px;text-align:center;font-size:22px}
@@ -45,6 +48,7 @@
       border-radius:16px;
       margin-top:12px;
     }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
     .btn2{
       border:1px solid rgba(148,163,184,.18);
       background:#0c1630;
@@ -110,10 +114,10 @@
     }
     .muted{color:#94a3b8;font-size:12px}
 
-    /* qty + unit row (правки для видимости кол-ва) */
+    /* qty + unit row */
     .qty-row{
       display:grid;
-      grid-template-columns: 1fr 88px; /* количество шире, тип уже */
+      grid-template-columns: 1fr 88px;
       gap:10px;
       align-items:end;
     }
@@ -132,7 +136,7 @@
       #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
 
-    /* NEW: debt fields in money mode */
+    /* debt fields */
     #debtNow, #debtAfter{
       text-align:center;
       font-weight:800;
@@ -206,7 +210,6 @@
     </div>
 
     <div id="moneyBlock" style="display:none">
-      <!-- NEW: debt before/after -->
       <div class="row" style="margin-top:12px">
         <div>
           <label>Текущий долг</label>
@@ -233,10 +236,24 @@
 </div>
 
 <script>
+  // --- Telegram viewport height fix ---
+  (function setAppHeight(){
+    const set = () => {
+      const h = (window.Telegram?.WebApp?.viewportStableHeight || window.innerHeight);
+      document.documentElement.style.setProperty('--app-height', h + 'px');
+    };
+    set();
+    window.addEventListener('resize', set);
+    window.addEventListener('orientationchange', set);
+  })();
+
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
+  // Можно поменять на http://127.0.0.1:8001 для теста на сервере,
+  // но в проде оставляем домен:
   const API_BASE = "https://api.stroybote.ru";
+
   const params = new URLSearchParams(location.search);
   const mode = (params.get("mode") || "order").toLowerCase(); // order | money
 
@@ -295,7 +312,7 @@
   let items = [];
 
   // money state
-  let currentDebt = 0; // рубли
+  let currentDebt = 0;
   let currentDebtLoaded = false;
 
   function showError(text) {
@@ -312,6 +329,20 @@
 
   function openSuggest(box){ box.style.display = "block"; }
   function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
+
+  // --- fetch helper (с таймаутом) ---
+  async function apiGet(path, timeoutMs=15000){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), timeoutMs);
+    try{
+      const r = await fetch(API_BASE + path, {signal: ctrl.signal});
+      const j = await r.json().catch(()=> ({}));
+      if (!r.ok) throw new Error(j.detail || (r.status + " " + r.statusText));
+      return j;
+    } finally {
+      clearTimeout(t);
+    }
+  }
 
   // --- utils ---
   function formatSpacesDigits(raw) {
@@ -333,14 +364,12 @@
   }
   function recomputeDebtAfter(){
     if (!debtAfter) return;
-    const amountStr = (moneyAmount?.value || "").trim();
-    const amountDigits = amountStr.replace(/\s+/g, "");
-    const paid = Number(amountDigits || 0);
-
     if (!currentDebtLoaded){
       debtAfter.value = "—";
       return;
     }
+    const amountDigits = (moneyAmount?.value || "").replace(/\s+/g, "");
+    const paid = Number(amountDigits || 0);
     const left = Math.max(0, Math.trunc(currentDebt - paid));
     debtAfter.value = fmtNumberSpaces(left);
   }
@@ -358,16 +387,21 @@
 
   // --- managers from tags ---
   async function loadManagers() {
-    managerSelect.innerHTML = `<option value="">— выбери —</option>`;
-    const r = await fetch(`${API_BASE}/ms/managers`);
-    const j = await r.json();
+    managerSelect.innerHTML = `<option value="">— загрузка… —</option>`;
+    const j = await apiGet(`/ms/managers`);
     const rows = j.rows || [];
+
+    managerSelect.innerHTML = `<option value="">— выбери —</option>`;
+
     for (const x of rows) {
-      const t = x.tag;
-      const c = x.count || 0;
+      // поддержка разных форматов:
+      const tag = (x.tag ?? x.name ?? x.manager ?? "").toString().trim();
+      const c = Number(x.count ?? x.cnt ?? 0);
+      if (!tag) continue;
+
       const opt = document.createElement("option");
-      opt.value = t;
-      opt.textContent = `${t} (${c})`;
+      opt.value = tag;
+      opt.textContent = c ? `${tag} (${c})` : tag;
       managerSelect.appendChild(opt);
     }
   }
@@ -380,10 +414,11 @@
     cpHint.textContent = "Загружаю контрагентов…";
     resetDebtUI();
 
-    const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`;
-    const r = await fetch(url);
-    const j = await r.json();
+    // ВАЖНО: параметр оставил как в твоей старой версии: manager=
+    // (на бэке сделай, чтобы принимал manager / manager_tag / manager_name)
+    const j = await apiGet(`/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`);
     const rows = j.rows || [];
+
     counterparties = rows
       .filter(x => x && x.name)
       .map(x => ({id: x.id || "", name: x.name}));
@@ -394,9 +429,17 @@
   async function loadDebtByCounterpartyId(cpId){
     if (!cpId) return;
     try{
-      const r = await fetch(`${API_BASE}/ms/debt?counterparty_id=${encodeURIComponent(cpId)}`);
-      const j = await r.json();
-      const debt = Number(j?.debt_rub || 0);
+      const j = await apiGet(`/ms/debt?counterparty_id=${encodeURIComponent(cpId)}`);
+
+      // поддержка разных ответов:
+      const debt = Number(
+        j?.debt_rub ??
+        j?.debt_to_us ??
+        j?.debt ??
+        j?.amount ??
+        0
+      );
+
       currentDebt = debt;
       currentDebtLoaded = true;
 
@@ -426,7 +469,6 @@
         cpInput.dataset.id = x.id || "";
         closeSuggest(cpSuggest);
 
-        // NEW: debt in money mode
         if (mode === "money" && x.id) {
           await loadDebtByCounterpartyId(x.id);
         } else {
@@ -448,18 +490,21 @@
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
-    const url = `${API_BASE}/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`;
-    const r = await fetch(url);
-    const j = await r.json();
-    const seen = new Set();
+    const j = await apiGet(`/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`);
     const out = [];
+    const seen = new Set();
+
     for (const x of (j.rows || [])) {
       const name = (x?.name || "").trim();
       if (!name) continue;
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({name});
+
+      out.push({
+        id: x.id || null,
+        name
+      });
     }
     return out;
   }
@@ -473,6 +518,7 @@
       div.textContent = x.name;
       div.onclick = () => {
         prodInput.value = x.name;
+        prodInput.dataset.id = x.id || "";
         closeSuggest(prodSuggest);
       };
       prodSuggest.appendChild(div);
@@ -571,6 +617,7 @@
   addItemBtn?.addEventListener("click", () => {
     hideMsg();
     const name = (prodInput.value || "").trim();
+    const pid = (prodInput.dataset.id || "").trim() || null;
     const qty = Number(qtyInput.value || 0);
     const unit = (qtyUnit?.value || "шт").trim();
 
@@ -578,12 +625,14 @@
     if (!qty || qty <= 0) return showError("Укажи количество.");
 
     items.push({
+      product_id: pid,
       product_name: name,
       qty: qty,
       unit: unit
     });
 
     prodInput.value = "";
+    prodInput.dataset.id = "";
     qtyInput.value = "";
     updateItemsUI();
     showOk("Позиция добавлена ✅");
@@ -607,13 +656,13 @@
     if (!cpName) return showError("Выбери/введи контрагента.");
 
     const submission_id = makeId();
+    const created_at = new Date().toISOString();
 
     if (mode === "money") {
       const cpId = (cpInput.dataset.id || "").trim();
       if (!cpId) return showError("Выбери контрагента ИМЕННО из списка (чтобы подтянуть долг).");
 
-      const amountStr = (moneyAmount.value || "").trim();
-      const amountDigits = amountStr.replace(/\s+/g, "");
+      const amountDigits = (moneyAmount.value || "").replace(/\s+/g, "");
       const amount = Number(amountDigits || 0);
       if (!amount || amount <= 0) return showError("Укажи сумму возврата долга.");
 
@@ -632,7 +681,8 @@
         debt_before,
         amount: Math.trunc(amount),
         debt_after,
-        note: (note.value || "").trim()
+        note: (note.value || "").trim(),
+        created_at
       };
 
       if (tg) {
@@ -640,7 +690,7 @@
         tg.close();
       } else {
         console.log(payload);
-        showOk("sendData недоступен (не Telegram).");
+        showOk("sendData недоступен (не Telegram). Смотри console.");
       }
       return;
     }
@@ -658,7 +708,8 @@
       counterparty_name: cpName,
       truck_type: truck,
       items: items,
-      note: (note.value || "").trim()
+      note: (note.value || "").trim(),
+      created_at
     };
 
     if (tg) {
@@ -666,7 +717,7 @@
       tg.close();
     } else {
       console.log(payload);
-      showOk("sendData недоступен (не Telegram).");
+      showOk("sendData недоступен (не Telegram). Смотри console.");
     }
   });
 
