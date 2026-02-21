@@ -58,6 +58,7 @@
     .err{color:#fb7185;font-size:12px;margin-top:10px}
     .ok{color:#34d399;font-size:12px;margin-top:10px}
 
+    /* suggestions dropdown */
     .suggest-wrap{position:relative}
     .suggest{
       position:absolute; left:0; right:0; top:100%;
@@ -109,10 +110,10 @@
     }
     .muted{color:#94a3b8;font-size:12px}
 
-    /* qty row visibility */
+    /* qty + unit row (правки для видимости кол-ва) */
     .qty-row{
       display:grid;
-      grid-template-columns: 1fr 88px;
+      grid-template-columns: 1fr 88px; /* количество шире, тип уже */
       gap:10px;
       align-items:end;
     }
@@ -131,17 +132,12 @@
       #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
 
-    /* debt box */
-    .debtbox{
-      border:1px dashed rgba(148,163,184,.25);
-      border-radius:14px;
-      padding:10px 12px;
-      margin-top:10px;
-      background:#0a132b;
-      font-size:14px;
-      color:#e5e7eb;
+    /* NEW: debt fields in money mode */
+    #debtNow, #debtAfter{
+      text-align:center;
+      font-weight:800;
+      letter-spacing:.3px;
     }
-    .debtbox b{font-size:15px}
   </style>
 </head>
 <body>
@@ -210,15 +206,22 @@
     </div>
 
     <div id="moneyBlock" style="display:none">
-      <label>Сумма возврата долга</label>
+      <!-- NEW: debt before/after -->
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Текущий долг</label>
+          <input id="debtNow" type="text" value="—" readonly>
+        </div>
+        <div>
+          <label>Остаток после оплаты</label>
+          <input id="debtAfter" type="text" value="—" readonly>
+        </div>
+      </div>
+
+      <label style="margin-top:12px">Сумма возврата долга</label>
       <input id="moneyAmount" type="text" inputmode="numeric" placeholder="например: 300 000">
       <div class="hint">Пробелы ставятся автоматически: 300 000</div>
-
-      <!-- NEW: debt info -->
-      <div id="debtBox" class="debtbox" style="display:none">
-        Долг: <b id="debtNow">—</b><br>
-        Остаток после оплаты: <b id="debtAfter">—</b>
-      </div>
+      <div class="hint" id="debtHint">Выбери контрагента из списка — долг подтянется автоматически.</div>
     </div>
 
     <label>Комментарий (не обязательно)</label>
@@ -260,14 +263,15 @@
   const itemsStat = document.getElementById("itemsStat");
 
   const moneyAmount = document.getElementById("moneyAmount");
-  const debtBox = document.getElementById("debtBox");
-  const debtNowEl = document.getElementById("debtNow");
-  const debtAfterEl = document.getElementById("debtAfter");
+  const debtNow = document.getElementById("debtNow");
+  const debtAfter = document.getElementById("debtAfter");
+  const debtHint = document.getElementById("debtHint");
 
   const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
+  // mode setup
   if (mode === "money") {
     titleEl.textContent = "Деньги";
     orderBlock.style.display = "none";
@@ -278,18 +282,21 @@
     moneyBlock.style.display = "none";
   }
 
+  // date today
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const dd = String(today.getDate()).padStart(2,'0');
   docDate.value = `${yyyy}-${mm}-${dd}`;
 
+  // state
   let managerTag = "";
-  let counterparties = [];
+  let counterparties = []; // {id,name}
   let items = [];
 
-  // debt state
-  let debtValue = null; // number | null
+  // money state
+  let currentDebt = 0; // рубли
+  let currentDebtLoaded = false;
 
   function showError(text) {
     msg.className = "err";
@@ -306,11 +313,50 @@
   function openSuggest(box){ box.style.display = "block"; }
   function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
 
-  function fmtSpaces(n){
-    const x = Math.max(0, Math.floor(Number(n || 0)));
-    return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  // --- utils ---
+  function formatSpacesDigits(raw) {
+    const digits = (raw || "").replace(/\D+/g, "");
+    if (!digits) return "";
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+  function fmtNumberSpaces(n){
+    const x = Number(n || 0);
+    if (!x) return "0";
+    return String(Math.trunc(x)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+  function resetDebtUI(){
+    currentDebt = 0;
+    currentDebtLoaded = false;
+    if (debtNow) debtNow.value = "—";
+    if (debtAfter) debtAfter.value = "—";
+    if (debtHint) debtHint.textContent = "Выбери контрагента из списка — долг подтянется автоматически.";
+  }
+  function recomputeDebtAfter(){
+    if (!debtAfter) return;
+    const amountStr = (moneyAmount?.value || "").trim();
+    const amountDigits = amountStr.replace(/\s+/g, "");
+    const paid = Number(amountDigits || 0);
+
+    if (!currentDebtLoaded){
+      debtAfter.value = "—";
+      return;
+    }
+    const left = Math.max(0, Math.trunc(currentDebt - paid));
+    debtAfter.value = fmtNumberSpaces(left);
   }
 
+  function makeId(){
+    try{
+      if (window.crypto?.getRandomValues){
+        const a = new Uint8Array(8);
+        window.crypto.getRandomValues(a);
+        return Array.from(a).map(x=>x.toString(16).padStart(2,'0')).join('');
+      }
+    }catch(e){}
+    return String(Date.now()) + Math.random().toString(16).slice(2);
+  }
+
+  // --- managers from tags ---
   async function loadManagers() {
     managerSelect.innerHTML = `<option value="">— выбери —</option>`;
     const r = await fetch(`${API_BASE}/ms/managers`);
@@ -326,13 +372,13 @@
     }
   }
 
+  // --- counterparties (by manager tag) ---
   async function loadCounterpartiesByTag(tag) {
     counterparties = [];
     cpInput.value = "";
     cpInput.dataset.id = "";
     cpHint.textContent = "Загружаю контрагентов…";
-    debtValue = null;
-    if (debtBox) debtBox.style.display = "none";
+    resetDebtUI();
 
     const url = `${API_BASE}/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`;
     const r = await fetch(url);
@@ -343,6 +389,24 @@
       .map(x => ({id: x.id || "", name: x.name}));
 
     cpHint.textContent = `Загружено контрагентов: ${counterparties.length}`;
+  }
+
+  async function loadDebtByCounterpartyId(cpId){
+    if (!cpId) return;
+    try{
+      const r = await fetch(`${API_BASE}/ms/debt?counterparty_id=${encodeURIComponent(cpId)}`);
+      const j = await r.json();
+      const debt = Number(j?.debt_rub || 0);
+      currentDebt = debt;
+      currentDebtLoaded = true;
+
+      if (debtNow) debtNow.value = fmtNumberSpaces(debt);
+      if (debtHint) debtHint.textContent = "Долг подтянут из МойСклад. Ввод суммы покажет остаток автоматически.";
+      recomputeDebtAfter();
+    }catch(e){
+      resetDebtUI();
+      if (debtHint) debtHint.textContent = "Не удалось получить долг из МойСклад. Проверь API /ms/debt.";
+    }
   }
 
   function renderCpSuggest(filterText="") {
@@ -362,9 +426,11 @@
         cpInput.dataset.id = x.id || "";
         closeSuggest(cpSuggest);
 
-        // NEW: load debt in money mode
-        if (mode === "money") {
-          await refreshDebt();
+        // NEW: debt in money mode
+        if (mode === "money" && x.id) {
+          await loadDebtByCounterpartyId(x.id);
+        } else {
+          resetDebtUI();
         }
       };
       cpSuggest.appendChild(div);
@@ -378,6 +444,7 @@
     openSuggest(cpSuggest);
   }
 
+  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
@@ -419,6 +486,7 @@
     openSuggest(prodSuggest);
   }
 
+  // --- items list ---
   function updateItemsUI() {
     itemsStat.textContent = `Позиции: ${items.length}`;
     if (items.length === 0) {
@@ -446,62 +514,22 @@
     });
   }
 
-  function formatSpacesDigits(raw) {
-    const digits = (raw || "").replace(/\D+/g, "");
-    if (!digits) return "";
-    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-  }
-
-  function calcDebtAfter(){
-    if (debtValue === null || debtValue === undefined) return null;
-    const amountDigits = (moneyAmount?.value || "").replace(/\s+/g, "");
-    const amount = Number(amountDigits || 0);
-    if (!amount || amount < 0) return debtValue;
-    return Math.max(0, Math.round(debtValue - amount));
-  }
-
-  async function refreshDebt(){
-    const cid = cpInput.dataset.id || "";
-    if (!cid) {
-      debtValue = null;
-      if (debtBox) debtBox.style.display = "none";
-      return;
-    }
-    try{
-      const r = await fetch(`${API_BASE}/ms/debt?counterparty_id=${encodeURIComponent(cid)}`);
-      const j = await r.json();
-      debtValue = (j && typeof j.debt === "number") ? Math.round(j.debt) : null;
-
-      if (debtValue !== null){
-        debtNowEl.textContent = fmtSpaces(debtValue);
-        const after = calcDebtAfter();
-        debtAfterEl.textContent = after === null ? "—" : fmtSpaces(after);
-        debtBox.style.display = "block";
-      } else {
-        debtBox.style.display = "none";
-      }
-    }catch(e){
-      debtValue = null;
-      debtBox.style.display = "none";
-    }
-  }
-
+  // money input formatting with spaces + recompute
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
       moneyAmount.value = formatSpacesDigits(moneyAmount.value);
-      if (mode === "money" && debtValue !== null){
-        const after = calcDebtAfter();
-        debtAfterEl.textContent = after === null ? "—" : fmtSpaces(after);
-      }
+      recomputeDebtAfter();
     });
   }
 
+  // events
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
     if (!managerTag) {
       cpHint.textContent = "Выбери менеджера — и контрагенты подтянутся по его тегу.";
       counterparties = [];
+      resetDebtUI();
       return;
     }
     try {
@@ -518,16 +546,19 @@
   cpInput.addEventListener("input", () => {
     if (!managerTag) return;
     renderCpSuggest(cpInput.value);
+
+    // если человек руками стирает/меняет — сброс долга
+    if (mode === "money") resetDebtUI();
   });
 
   if (prodInput) {
     prodInput.addEventListener("focus", async () => {
-      try { await renderProdSuggest(""); } catch(e){}
+      try { await renderProdSuggest(""); } catch(e){ /* ignore */ }
     });
     prodInput.addEventListener("input", () => {
       clearTimeout(prodDebounce);
       prodDebounce = setTimeout(async () => {
-        try { await renderProdSuggest(prodInput.value); } catch(e){}
+        try { await renderProdSuggest(prodInput.value); } catch(e){ /* ignore */ }
       }, 250);
     });
   }
@@ -546,7 +577,11 @@
     if (!name) return showError("Выбери товар.");
     if (!qty || qty <= 0) return showError("Укажи количество.");
 
-    items.push({ product_name: name, qty: qty, unit: unit });
+    items.push({
+      product_name: name,
+      qty: qty,
+      unit: unit
+    });
 
     prodInput.value = "";
     qtyInput.value = "";
@@ -565,41 +600,57 @@
     const manager = managerSelect.value || "";
     const date = docDate.value || "";
     const cpName = (cpInput.value || "").trim();
+    const truck = (truckType?.value || "").trim();
 
     if (!manager) return showError("Выбери менеджера.");
     if (!date) return showError("Укажи дату.");
     if (!cpName) return showError("Выбери/введи контрагента.");
 
+    const submission_id = makeId();
+
     if (mode === "money") {
+      const cpId = (cpInput.dataset.id || "").trim();
+      if (!cpId) return showError("Выбери контрагента ИМЕННО из списка (чтобы подтянуть долг).");
+
       const amountStr = (moneyAmount.value || "").trim();
       const amountDigits = amountStr.replace(/\s+/g, "");
       const amount = Number(amountDigits || 0);
       if (!amount || amount <= 0) return showError("Укажи сумму возврата долга.");
 
-      const after = calcDebtAfter();
+      if (!currentDebtLoaded) return showError("Не удалось получить текущий долг. Выбери контрагента из списка ещё раз.");
+
+      const debt_before = Math.trunc(currentDebt);
+      const debt_after = Math.max(0, Math.trunc(currentDebt - amount));
 
       const payload = {
+        submission_id,
         kind: "money",
         manager_name: manager,
         doc_date: date,
-        counterparty_id: cpInput.dataset.id || null,
+        counterparty_id: cpId,
         counterparty_name: cpName,
-        amount: amount,
-        debt_before: (typeof debtValue === "number") ? debtValue : null,
-        debt_after: (typeof after === "number") ? after : null,
+        debt_before,
+        amount: Math.trunc(amount),
+        debt_after,
         note: (note.value || "").trim()
       };
 
-      if (tg) { tg.sendData(JSON.stringify(payload)); tg.close(); }
-      else { console.log(payload); showOk("sendData недоступен (не Telegram)."); }
+      if (tg) {
+        tg.sendData(JSON.stringify(payload));
+        tg.close();
+      } else {
+        console.log(payload);
+        showOk("sendData недоступен (не Telegram).");
+      }
       return;
     }
 
-    const truck = (truckType?.value || "").trim();
+    // order
     if (!items.length) return showError("Добавь хотя бы 1 позицию.");
     if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
     const payload = {
+      submission_id,
       kind: "order",
       manager_name: manager,
       doc_date: date,
@@ -610,12 +661,19 @@
       note: (note.value || "").trim()
     };
 
-    if (tg) { tg.sendData(JSON.stringify(payload)); tg.close(); }
-    else { console.log(payload); showOk("sendData недоступен (не Telegram)."); }
+    if (tg) {
+      tg.sendData(JSON.stringify(payload));
+      tg.close();
+    } else {
+      console.log(payload);
+      showOk("sendData недоступен (не Telegram).");
+    }
   });
 
+  // init
   loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
   updateItemsUI();
+  if (mode === "money") resetDebtUI();
 </script>
 </body>
 </html>
