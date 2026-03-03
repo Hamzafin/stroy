@@ -62,7 +62,6 @@
     .err{color:#fb7185;font-size:12px;margin-top:10px}
     .ok{color:#34d399;font-size:12px;margin-top:10px}
 
-    /* suggestions dropdown */
     .suggest-wrap{position:relative}
     .suggest{
       position:absolute; left:0; right:0; top:100%;
@@ -114,7 +113,6 @@
     }
     .muted{color:#94a3b8;font-size:12px}
 
-    /* qty + unit row */
     .qty-row{
       display:grid;
       grid-template-columns: 1fr 88px;
@@ -136,7 +134,6 @@
       #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
 
-    /* debt fields */
     #debtNow, #debtAfter{
       text-align:center;
       font-weight:800;
@@ -155,7 +152,7 @@
         <select id="managerSelect">
           <option value="">— загрузка… —</option>
         </select>
-        <div class="hint">Менеджеры подтягиваются автоматически из тегов. Добавишь новый тег в МойСклад — появится тут.</div>
+        <div class="hint">Менеджеры подтягиваются автоматически из тегов.</div>
       </div>
       <div>
         <label>Дата</label>
@@ -163,12 +160,15 @@
       </div>
     </div>
 
-    <label>Контрагент</label>
-    <div class="suggest-wrap">
-      <input id="cpInput" type="text" placeholder="Начни вводить имя контрагента…" autocomplete="off">
-      <div id="cpSuggest" class="suggest"></div>
+    <!-- Контрагент (скрываем в expense) -->
+    <div id="cpBlock">
+      <label>Контрагент</label>
+      <div class="suggest-wrap">
+        <input id="cpInput" type="text" placeholder="Начни вводить имя контрагента…" autocomplete="off">
+        <div id="cpSuggest" class="suggest"></div>
+      </div>
+      <div class="hint" id="cpHint">Выбери менеджера — и контрагенты подтянутся по его тегу.</div>
     </div>
-    <div class="hint" id="cpHint">Выбери менеджера — и контрагенты подтянутся по его тегу.</div>
 
     <div id="orderBlock">
       <div class="row" style="margin-top:12px">
@@ -227,8 +227,61 @@
       <div class="hint" id="debtHint">Выбери контрагента из списка — долг подтянется автоматически.</div>
     </div>
 
-    <label>Комментарий (не обязательно)</label>
-    <textarea id="note" placeholder="комментарий…"></textarea>
+    <!-- EXPENSE -->
+    <div id="expenseBlock" style="display:none">
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Месяц</label>
+          <input id="expMonth" type="month">
+        </div>
+        <div>
+          <label>Действие</label>
+          <button class="btn2" id="expCalcBtn" type="button">Рассчитать</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Заявок 10т</label>
+          <input id="exp10" type="text" value="0" readonly>
+        </div>
+        <div>
+          <label>Заявок 20т</label>
+          <input id="exp20" type="text" value="0" readonly>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Всего заявок</label>
+          <input id="expTotal" type="text" value="0" readonly>
+        </div>
+        <div>
+          <label>Сумма по расчёту</label>
+          <input id="expSalary" type="text" value="0" readonly>
+        </div>
+      </div>
+
+      <label style="margin-top:12px">Сумма вручную (если нужно)</label>
+      <input id="expManual" type="text" inputmode="numeric" placeholder="например: 15 000">
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn2" id="expLoadOrdersBtn" type="button">Показать заявки</button>
+        <button class="btn2" id="expHideOrdersBtn" type="button">Скрыть</button>
+      </div>
+
+      <div class="hint">
+        Удаление заявки здесь удаляет её из базы бота (для перерасчёта зарплаты).
+        Сообщение в чате поставщика не удаляется.
+      </div>
+
+      <div id="expOrdersBox" class="items" style="display:none"></div>
+    </div>
+
+    <div id="noteBlock">
+      <label>Комментарий (не обязательно)</label>
+      <textarea id="note" placeholder="комментарий…"></textarea>
+    </div>
 
     <button class="btn" id="sendBtn" type="button">Отправить в бот</button>
     <div id="msg" class="err" style="display:none"></div>
@@ -236,7 +289,6 @@
 </div>
 
 <script>
-  // --- Telegram viewport height fix ---
   (function setAppHeight(){
     const set = () => {
       const h = (window.Telegram?.WebApp?.viewportStableHeight || window.innerHeight);
@@ -250,17 +302,16 @@
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.ready(); tg.expand(); }
 
-  // Можно поменять на http://127.0.0.1:8001 для теста на сервере,
-  // но в проде оставляем домен:
   const API_BASE = "https://api.stroybote.ru";
 
   const params = new URLSearchParams(location.search);
-  const mode = (params.get("mode") || "order").toLowerCase(); // order | money
+  const mode = (params.get("mode") || "order").toLowerCase(); // order | money | expense
 
   const titleEl = document.getElementById("title");
   const managerSelect = document.getElementById("managerSelect");
   const docDate = document.getElementById("docDate");
 
+  const cpBlock = document.getElementById("cpBlock");
   const cpInput = document.getElementById("cpInput");
   const cpSuggest = document.getElementById("cpSuggest");
   const cpHint = document.getElementById("cpHint");
@@ -284,19 +335,41 @@
   const debtAfter = document.getElementById("debtAfter");
   const debtHint = document.getElementById("debtHint");
 
+  const expenseBlock = document.getElementById("expenseBlock");
+  const expMonth = document.getElementById("expMonth");
+  const expCalcBtn = document.getElementById("expCalcBtn");
+  const exp10 = document.getElementById("exp10");
+  const exp20 = document.getElementById("exp20");
+  const expTotal = document.getElementById("expTotal");
+  const expSalary = document.getElementById("expSalary");
+  const expManual = document.getElementById("expManual");
+  const expLoadOrdersBtn = document.getElementById("expLoadOrdersBtn");
+  const expHideOrdersBtn = document.getElementById("expHideOrdersBtn");
+  const expOrdersBox = document.getElementById("expOrdersBox");
+
+  const noteBlock = document.getElementById("noteBlock");
   const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
-  // mode setup
   if (mode === "money") {
     titleEl.textContent = "Деньги";
     orderBlock.style.display = "none";
     moneyBlock.style.display = "block";
+    expenseBlock.style.display = "none";
+  } else if (mode === "expense") {
+    titleEl.textContent = "Расходы";
+    orderBlock.style.display = "none";
+    moneyBlock.style.display = "none";
+    expenseBlock.style.display = "block";
+    cpBlock.style.display = "none";
+    noteBlock.style.display = "none";
+    sendBtn.style.display = "none";
   } else {
     titleEl.textContent = "Заявка";
     orderBlock.style.display = "block";
     moneyBlock.style.display = "none";
+    expenseBlock.style.display = "none";
   }
 
   // date today
@@ -305,13 +378,13 @@
   const mm = String(today.getMonth()+1).padStart(2,'0');
   const dd = String(today.getDate()).padStart(2,'0');
   docDate.value = `${yyyy}-${mm}-${dd}`;
+  if (expMonth) expMonth.value = `${yyyy}-${mm}`;
 
   // state
   let managerTag = "";
-  let counterparties = []; // {id,name}
+  let counterparties = [];
   let items = [];
 
-  // money state
   let currentDebt = 0;
   let currentDebtLoaded = false;
 
@@ -330,12 +403,22 @@
   function openSuggest(box){ box.style.display = "block"; }
   function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
 
-  // --- fetch helper (с таймаутом) ---
-  async function apiGet(path, timeoutMs=15000){
+  function tgHeaders(){
+    const h = {};
+    if (tg?.initData) h["X-TG-INITDATA"] = tg.initData;
+    return h;
+  }
+
+  async function apiRequest(path, {method="GET", headers={}, body=null, timeoutMs=15000} = {}){
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), timeoutMs);
     try{
-      const r = await fetch(API_BASE + path, {signal: ctrl.signal});
+      const opts = { method, headers: {...headers}, signal: ctrl.signal };
+      if (body !== null) {
+        opts.headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(body);
+      }
+      const r = await fetch(API_BASE + path, opts);
       const j = await r.json().catch(()=> ({}));
       if (!r.ok) throw new Error(j.detail || (r.status + " " + r.statusText));
       return j;
@@ -343,8 +426,10 @@
       clearTimeout(t);
     }
   }
+  async function apiGet(path, timeoutMs=15000){
+    return apiRequest(path, {timeoutMs});
+  }
 
-  // --- utils ---
   function formatSpacesDigits(raw) {
     const digits = (raw || "").replace(/\D+/g, "");
     if (!digits) return "";
@@ -355,6 +440,7 @@
     if (!x) return "0";
     return String(Math.trunc(x)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
+
   function resetDebtUI(){
     currentDebt = 0;
     currentDebtLoaded = false;
@@ -385,20 +471,15 @@
     return String(Date.now()) + Math.random().toString(16).slice(2);
   }
 
-  // --- managers from tags ---
   async function loadManagers() {
     managerSelect.innerHTML = `<option value="">— загрузка… —</option>`;
     const j = await apiGet(`/ms/managers`);
     const rows = j.rows || [];
-
     managerSelect.innerHTML = `<option value="">— выбери —</option>`;
-
     for (const x of rows) {
-      // поддержка разных форматов:
       const tag = (x.tag ?? x.name ?? x.manager ?? "").toString().trim();
       const c = Number(x.count ?? x.cnt ?? 0);
       if (!tag) continue;
-
       const opt = document.createElement("option");
       opt.value = tag;
       opt.textContent = c ? `${tag} (${c})` : tag;
@@ -406,7 +487,6 @@
     }
   }
 
-  // --- counterparties (by manager tag) ---
   async function loadCounterpartiesByTag(tag) {
     counterparties = [];
     cpInput.value = "";
@@ -414,15 +494,9 @@
     cpHint.textContent = "Загружаю контрагентов…";
     resetDebtUI();
 
-    // ВАЖНО: параметр оставил как в твоей старой версии: manager=
-    // (на бэке сделай, чтобы принимал manager / manager_tag / manager_name)
     const j = await apiGet(`/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`);
     const rows = j.rows || [];
-
-    counterparties = rows
-      .filter(x => x && x.name)
-      .map(x => ({id: x.id || "", name: x.name}));
-
+    counterparties = rows.filter(x => x && x.name).map(x => ({id: x.id || "", name: x.name}));
     cpHint.textContent = `Загружено контрагентов: ${counterparties.length}`;
   }
 
@@ -430,19 +504,9 @@
     if (!cpId) return;
     try{
       const j = await apiGet(`/ms/debt?counterparty_id=${encodeURIComponent(cpId)}`);
-
-      // поддержка разных ответов:
-      const debt = Number(
-        j?.debt_rub ??
-        j?.debt_to_us ??
-        j?.debt ??
-        j?.amount ??
-        0
-      );
-
+      const debt = Number(j?.debt_rub ?? j?.debt_to_us ?? j?.debt ?? 0);
       currentDebt = debt;
       currentDebtLoaded = true;
-
       if (debtNow) debtNow.value = fmtNumberSpaces(debt);
       if (debtHint) debtHint.textContent = "Долг подтянут из МойСклад. Ввод суммы покажет остаток автоматически.";
       recomputeDebtAfter();
@@ -454,10 +518,7 @@
 
   function renderCpSuggest(filterText="") {
     const q = (filterText || "").trim().toLowerCase();
-    const list = q
-      ? counterparties.filter(x => x.name.toLowerCase().includes(q))
-      : counterparties;
-
+    const list = q ? counterparties.filter(x => x.name.toLowerCase().includes(q)) : counterparties;
     const top = list.slice(0, 60);
     cpSuggest.innerHTML = "";
     for (const x of top) {
@@ -468,7 +529,6 @@
         cpInput.value = x.name;
         cpInput.dataset.id = x.id || "";
         closeSuggest(cpSuggest);
-
         if (mode === "money" && x.id) {
           await loadDebtByCounterpartyId(x.id);
         } else {
@@ -486,25 +546,19 @@
     openSuggest(cpSuggest);
   }
 
-  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
     const j = await apiGet(`/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`);
     const out = [];
     const seen = new Set();
-
     for (const x of (j.rows || [])) {
       const name = (x?.name || "").trim();
       if (!name) continue;
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-
-      out.push({
-        id: x.id || null,
-        name
-      });
+      out.push({ id: x.id || null, name });
     }
     return out;
   }
@@ -532,7 +586,6 @@
     openSuggest(prodSuggest);
   }
 
-  // --- items list ---
   function updateItemsUI() {
     itemsStat.textContent = `Позиции: ${items.length}`;
     if (items.length === 0) {
@@ -560,24 +613,28 @@
     });
   }
 
-  // money input formatting with spaces + recompute
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
       moneyAmount.value = formatSpacesDigits(moneyAmount.value);
       recomputeDebtAfter();
     });
   }
+  if (expManual) {
+    expManual.addEventListener("input", () => {
+      expManual.value = formatSpacesDigits(expManual.value);
+    });
+  }
 
-  // events
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
     if (!managerTag) {
-      cpHint.textContent = "Выбери менеджера — и контрагенты подтянутся по его тегу.";
+      if (cpHint) cpHint.textContent = "Выбери менеджера — и контрагенты подтянутся по его тегу.";
       counterparties = [];
       resetDebtUI();
       return;
     }
+    if (mode === "expense") return; // там не грузим контрагентов
     try {
       await loadCounterpartiesByTag(managerTag);
     } catch (e) {
@@ -585,32 +642,32 @@
     }
   });
 
-  cpInput.addEventListener("focus", () => {
-    if (!managerTag) return;
-    renderCpSuggest(cpInput.value);
-  });
-  cpInput.addEventListener("input", () => {
-    if (!managerTag) return;
-    renderCpSuggest(cpInput.value);
-
-    // если человек руками стирает/меняет — сброс долга
-    if (mode === "money") resetDebtUI();
-  });
+  if (cpInput) {
+    cpInput.addEventListener("focus", () => {
+      if (!managerTag) return;
+      renderCpSuggest(cpInput.value);
+    });
+    cpInput.addEventListener("input", () => {
+      if (!managerTag) return;
+      renderCpSuggest(cpInput.value);
+      if (mode === "money") resetDebtUI();
+    });
+  }
 
   if (prodInput) {
     prodInput.addEventListener("focus", async () => {
-      try { await renderProdSuggest(""); } catch(e){ /* ignore */ }
+      try { await renderProdSuggest(""); } catch(e){}
     });
     prodInput.addEventListener("input", () => {
       clearTimeout(prodDebounce);
       prodDebounce = setTimeout(async () => {
-        try { await renderProdSuggest(prodInput.value); } catch(e){ /* ignore */ }
+        try { await renderProdSuggest(prodInput.value); } catch(e){}
       }, 250);
     });
   }
 
   document.addEventListener("click", (e) => {
-    if (!cpSuggest.contains(e.target) && e.target !== cpInput) closeSuggest(cpSuggest);
+    if (cpSuggest && !cpSuggest.contains(e.target) && e.target !== cpInput) closeSuggest(cpSuggest);
     if (prodSuggest && !prodSuggest.contains(e.target) && e.target !== prodInput) closeSuggest(prodSuggest);
   });
 
@@ -627,6 +684,7 @@
     items.push({
       product_id: pid,
       product_name: name,
+      name: name,              // совместимость (бот читает name)
       qty: qty,
       unit: unit
     });
@@ -644,11 +702,114 @@
     hideMsg();
   });
 
-  sendBtn.addEventListener("click", () => {
+  // -------- EXPENSE logic --------
+  function expSetZeros(){
+    if (exp10) exp10.value = "0";
+    if (exp20) exp20.value = "0";
+    if (expTotal) expTotal.value = "0";
+    if (expSalary) expSalary.value = "0";
+    if (expOrdersBox) { expOrdersBox.style.display = "none"; expOrdersBox.innerHTML = ""; }
+  }
+
+  async function loadExpenseSummary(){
+    hideMsg();
+    const m = managerSelect.value || "";
+    const month = expMonth.value || "";
+    if (!m) return showError("Выбери менеджера.");
+    if (!month) return showError("Выбери месяц.");
+
+    try{
+      const j = await apiRequest(`/exp/summary?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}`, {
+        headers: tgHeaders()
+      });
+      exp10.value = fmtNumberSpaces(j.truck_10t || 0);
+      exp20.value = fmtNumberSpaces(j.truck_20t || 0);
+      expTotal.value = fmtNumberSpaces(j.orders_total || 0);
+      expSalary.value = fmtNumberSpaces(j.salary_calc || 0);
+      showOk("Расчёт готов ✅");
+    }catch(e){
+      expSetZeros();
+      showError("Не удалось рассчитать расходы: " + (e?.message || e));
+    }
+  }
+
+  function renderExpenseOrders(rows){
+    expOrdersBox.innerHTML = "";
+    if (!rows.length){
+      const div = document.createElement("div");
+      div.className = "line";
+      div.innerHTML = `<div class="muted">Нет заявок за выбранный месяц</div>`;
+      expOrdersBox.appendChild(div);
+      expOrdersBox.style.display = "block";
+      return;
+    }
+
+    rows.forEach((o, idx) => {
+      const left = document.createElement("div");
+      const dt = o.doc_date || "";
+      const cp = o.counterparty_name || "-";
+      const tr = o.truck_type || "-";
+      const ic = o.items_count ?? 0;
+      left.innerHTML = `<div><b>${idx+1})</b> ${dt} — <b>${tr}</b></div><div class="muted">${cp} • позиций: ${ic}</div>`;
+
+      const row = document.createElement("div");
+      row.className = "line";
+      row.appendChild(left);
+
+      const btn = document.createElement("button");
+      btn.className = "x";
+      btn.type = "button";
+      btn.textContent = "Удалить";
+      btn.onclick = async () => {
+        if (!confirm("Удалить заявку из базы?")) return;
+        try{
+          await apiRequest(`/exp/order/${encodeURIComponent(o.uid)}`, {method:"DELETE", headers: tgHeaders()});
+          showOk("Удалено ✅");
+          await loadExpenseSummary();
+          await loadExpenseOrders();
+        }catch(e){
+          showError("Ошибка удаления: " + (e?.message || e));
+        }
+      };
+
+      row.appendChild(btn);
+      expOrdersBox.appendChild(row);
+    });
+
+    expOrdersBox.style.display = "block";
+  }
+
+  async function loadExpenseOrders(){
+    hideMsg();
+    const m = managerSelect.value || "";
+    const month = expMonth.value || "";
+    if (!m) return showError("Выбери менеджера.");
+    if (!month) return showError("Выбери месяц.");
+
+    try{
+      const j = await apiRequest(`/exp/orders?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}&limit=3000`, {
+        headers: tgHeaders()
+      });
+      renderExpenseOrders(j.rows || []);
+    }catch(e){
+      expOrdersBox.style.display = "none";
+      expOrdersBox.innerHTML = "";
+      showError("Не удалось загрузить заявки: " + (e?.message || e));
+    }
+  }
+
+  expCalcBtn?.addEventListener("click", loadExpenseSummary);
+  expLoadOrdersBtn?.addEventListener("click", loadExpenseOrders);
+  expHideOrdersBtn?.addEventListener("click", () => {
+    expOrdersBox.style.display = "none";
+  });
+
+  // -------- send order/money --------
+  sendBtn?.addEventListener("click", () => {
     hideMsg();
     const manager = managerSelect.value || "";
     const date = docDate.value || "";
-    const cpName = (cpInput.value || "").trim();
+    const cpName = (cpInput?.value || "").trim();
     const truck = (truckType?.value || "").trim();
 
     if (!manager) return showError("Выбери менеджера.");
@@ -657,6 +818,7 @@
 
     const submission_id = makeId();
     const created_at = new Date().toISOString();
+    const commentText = (note?.value || "").trim();
 
     if (mode === "money") {
       const cpId = (cpInput.dataset.id || "").trim();
@@ -665,15 +827,15 @@
       const amountDigits = (moneyAmount.value || "").replace(/\s+/g, "");
       const amount = Number(amountDigits || 0);
       if (!amount || amount <= 0) return showError("Укажи сумму возврата долга.");
-
       if (!currentDebtLoaded) return showError("Не удалось получить текущий долг. Выбери контрагента из списка ещё раз.");
 
       const debt_before = Math.trunc(currentDebt);
       const debt_after = Math.max(0, Math.trunc(currentDebt - amount));
 
       const payload = {
-        submission_id,
+        type: "money",
         kind: "money",
+        submission_id,
         manager_name: manager,
         doc_date: date,
         counterparty_id: cpId,
@@ -681,7 +843,8 @@
         debt_before,
         amount: Math.trunc(amount),
         debt_after,
-        note: (note.value || "").trim(),
+        comment: commentText,
+        note: commentText,
         created_at
       };
 
@@ -700,15 +863,17 @@
     if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
     const payload = {
-      submission_id,
+      type: "order",
       kind: "order",
+      submission_id,
       manager_name: manager,
       doc_date: date,
       counterparty_id: cpInput.dataset.id || null,
       counterparty_name: cpName,
       truck_type: truck,
       items: items,
-      note: (note.value || "").trim(),
+      comment: commentText,
+      note: commentText,
       created_at
     };
 
@@ -725,6 +890,7 @@
   loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
   updateItemsUI();
   if (mode === "money") resetDebtUI();
+  if (mode === "expense") expSetZeros();
 </script>
 </body>
 </html>
