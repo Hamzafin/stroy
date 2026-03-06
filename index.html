@@ -110,6 +110,7 @@
       color:#e5e7eb;
       cursor:pointer;
       font-weight:800;
+      white-space:nowrap;
     }
     .muted{color:#94a3b8;font-size:12px}
 
@@ -139,6 +140,8 @@
       font-weight:800;
       letter-spacing:.3px;
     }
+
+    .sep{height:1px;background:rgba(148,163,184,.12);margin:12px 0}
   </style>
 </head>
 <body>
@@ -158,6 +161,16 @@
         <label>Дата</label>
         <input id="docDate" type="date">
       </div>
+    </div>
+
+    <!-- EXPENSE TYPE SELECT (виды расходов) -->
+    <div id="expenseTypeBlock" style="display:none">
+      <label style="margin-top:12px">Вид расхода</label>
+      <select id="expType">
+        <option value="salary">ЗП (по заявкам)</option>
+        <option value="other">Другое</option>
+      </select>
+      <div class="hint">ЗП — считает по заявкам (10т=1500, 20т=2500). Другое — ручной расход.</div>
     </div>
 
     <!-- Контрагент (скрываем в expense) -->
@@ -227,8 +240,8 @@
       <div class="hint" id="debtHint">Выбери контрагента из списка — долг подтянется автоматически.</div>
     </div>
 
-    <!-- EXPENSE -->
-    <div id="expenseBlock" style="display:none">
+    <!-- EXPENSE: Salary (ZP) -->
+    <div id="expenseSalaryBlock" style="display:none">
       <div class="row" style="margin-top:12px">
         <div>
           <label>Месяц</label>
@@ -276,6 +289,20 @@
       </div>
 
       <div id="expOrdersBox" class="items" style="display:none"></div>
+
+      <div class="sep"></div>
+      <div class="hint">Нажми “Отправить в бот” — уйдёт расход “ЗП” с суммой (ручной если заполнена, иначе по расчёту).</div>
+    </div>
+
+    <!-- EXPENSE: Other -->
+    <div id="expenseOtherBlock" style="display:none">
+      <label style="margin-top:12px">Статья расхода</label>
+      <input id="expArticle" type="text" placeholder="например: аренда / бензин / прочее">
+
+      <label style="margin-top:12px">Сумма</label>
+      <input id="expOtherAmount" type="text" inputmode="numeric" placeholder="например: 25 000">
+
+      <div class="hint">Комментарий можно добавить ниже.</div>
     </div>
 
     <div id="noteBlock">
@@ -305,11 +332,15 @@
   const API_BASE = "https://api.stroybote.ru";
 
   const params = new URLSearchParams(location.search);
-  const mode = (params.get("mode") || "order").toLowerCase(); // order | money | expense
+  const modeRaw = (params.get("mode") || "order").toLowerCase();
+  const mode = (modeRaw.startsWith("exp") ? "expenses" : modeRaw); // order | money | expenses
 
   const titleEl = document.getElementById("title");
   const managerSelect = document.getElementById("managerSelect");
   const docDate = document.getElementById("docDate");
+
+  const expenseTypeBlock = document.getElementById("expenseTypeBlock");
+  const expType = document.getElementById("expType");
 
   const cpBlock = document.getElementById("cpBlock");
   const cpInput = document.getElementById("cpInput");
@@ -335,7 +366,7 @@
   const debtAfter = document.getElementById("debtAfter");
   const debtHint = document.getElementById("debtHint");
 
-  const expenseBlock = document.getElementById("expenseBlock");
+  const expenseSalaryBlock = document.getElementById("expenseSalaryBlock");
   const expMonth = document.getElementById("expMonth");
   const expCalcBtn = document.getElementById("expCalcBtn");
   const exp10 = document.getElementById("exp10");
@@ -347,30 +378,51 @@
   const expHideOrdersBtn = document.getElementById("expHideOrdersBtn");
   const expOrdersBox = document.getElementById("expOrdersBox");
 
+  const expenseOtherBlock = document.getElementById("expenseOtherBlock");
+  const expArticle = document.getElementById("expArticle");
+  const expOtherAmount = document.getElementById("expOtherAmount");
+
   const noteBlock = document.getElementById("noteBlock");
   const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
+  // -------- mode setup --------
+  function setSendButtonText(){
+    if (mode === "money") sendBtn.textContent = "Отправить оплату";
+    else if (mode === "expenses") sendBtn.textContent = "Отправить расход";
+    else sendBtn.textContent = "Отправить заявку";
+  }
+
   if (mode === "money") {
     titleEl.textContent = "Деньги";
     orderBlock.style.display = "none";
     moneyBlock.style.display = "block";
-    expenseBlock.style.display = "none";
-  } else if (mode === "expense") {
+    expenseTypeBlock.style.display = "none";
+    expenseSalaryBlock.style.display = "none";
+    expenseOtherBlock.style.display = "none";
+    cpBlock.style.display = "block";
+    noteBlock.style.display = "block";
+  } else if (mode === "expenses") {
     titleEl.textContent = "Расходы";
     orderBlock.style.display = "none";
     moneyBlock.style.display = "none";
-    expenseBlock.style.display = "block";
-    cpBlock.style.display = "none";
-    noteBlock.style.display = "none";
-    sendBtn.style.display = "none";
+    cpBlock.style.display = "none";      // расходы без контрагента
+    expenseTypeBlock.style.display = "block";
+    expenseSalaryBlock.style.display = "block";
+    expenseOtherBlock.style.display = "none";
+    noteBlock.style.display = "none";    // включим только для "Другое"
   } else {
     titleEl.textContent = "Заявка";
     orderBlock.style.display = "block";
     moneyBlock.style.display = "none";
-    expenseBlock.style.display = "none";
+    expenseTypeBlock.style.display = "none";
+    expenseSalaryBlock.style.display = "none";
+    expenseOtherBlock.style.display = "none";
+    cpBlock.style.display = "block";
+    noteBlock.style.display = "block";
   }
+  setSendButtonText();
 
   // date today
   const today = new Date();
@@ -385,6 +437,7 @@
   let counterparties = [];
   let items = [];
 
+  // money state
   let currentDebt = 0;
   let currentDebtLoaded = false;
 
@@ -405,10 +458,12 @@
 
   function tgHeaders(){
     const h = {};
-    if (tg?.initData) h["X-TG-INITDATA"] = tg.initData;
+    // ВАЖНО: сервер ждёт именно этот заголовок
+    if (tg?.initData) h["X-Telegram-InitData"] = tg.initData;
     return h;
   }
 
+  // --- fetch helper (с таймаутом) ---
   async function apiRequest(path, {method="GET", headers={}, body=null, timeoutMs=15000} = {}){
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), timeoutMs);
@@ -427,9 +482,11 @@
     }
   }
   async function apiGet(path, timeoutMs=15000){
+    // обычные /ms/* без заголовков, а /exp/* сами добавят tgHeaders()
     return apiRequest(path, {timeoutMs});
   }
 
+  // --- utils ---
   function formatSpacesDigits(raw) {
     const digits = (raw || "").replace(/\D+/g, "");
     if (!digits) return "";
@@ -441,6 +498,7 @@
     return String(Math.trunc(x)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 
+  // debt fields
   function resetDebtUI(){
     currentDebt = 0;
     currentDebtLoaded = false;
@@ -471,6 +529,7 @@
     return String(Date.now()) + Math.random().toString(16).slice(2);
   }
 
+  // --- managers from tags ---
   async function loadManagers() {
     managerSelect.innerHTML = `<option value="">— загрузка… —</option>`;
     const j = await apiGet(`/ms/managers`);
@@ -487,6 +546,7 @@
     }
   }
 
+  // --- counterparties (by manager tag) ---
   async function loadCounterpartiesByTag(tag) {
     counterparties = [];
     cpInput.value = "";
@@ -496,7 +556,10 @@
 
     const j = await apiGet(`/ms/counterparties?manager=${encodeURIComponent(tag)}&limit=1000`);
     const rows = j.rows || [];
-    counterparties = rows.filter(x => x && x.name).map(x => ({id: x.id || "", name: x.name}));
+    counterparties = rows
+      .filter(x => x && x.name)
+      .map(x => ({id: x.id || "", name: x.name}));
+
     cpHint.textContent = `Загружено контрагентов: ${counterparties.length}`;
   }
 
@@ -504,9 +567,10 @@
     if (!cpId) return;
     try{
       const j = await apiGet(`/ms/debt?counterparty_id=${encodeURIComponent(cpId)}`);
-      const debt = Number(j?.debt_rub ?? j?.debt_to_us ?? j?.debt ?? 0);
+      const debt = Number(j?.debt_rub ?? j?.debt_to_us ?? j?.debt ?? j?.amount ?? 0);
       currentDebt = debt;
       currentDebtLoaded = true;
+
       if (debtNow) debtNow.value = fmtNumberSpaces(debt);
       if (debtHint) debtHint.textContent = "Долг подтянут из МойСклад. Ввод суммы покажет остаток автоматически.";
       recomputeDebtAfter();
@@ -518,7 +582,10 @@
 
   function renderCpSuggest(filterText="") {
     const q = (filterText || "").trim().toLowerCase();
-    const list = q ? counterparties.filter(x => x.name.toLowerCase().includes(q)) : counterparties;
+    const list = q
+      ? counterparties.filter(x => x.name.toLowerCase().includes(q))
+      : counterparties;
+
     const top = list.slice(0, 60);
     cpSuggest.innerHTML = "";
     for (const x of top) {
@@ -529,6 +596,7 @@
         cpInput.value = x.name;
         cpInput.dataset.id = x.id || "";
         closeSuggest(cpSuggest);
+
         if (mode === "money" && x.id) {
           await loadDebtByCounterpartyId(x.id);
         } else {
@@ -546,18 +614,21 @@
     openSuggest(cpSuggest);
   }
 
+  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
     const j = await apiGet(`/ms/products?limit=80&search=${encodeURIComponent(searchText || "")}`);
     const out = [];
     const seen = new Set();
+
     for (const x of (j.rows || [])) {
       const name = (x?.name || "").trim();
       if (!name) continue;
       const key = name.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
+
       out.push({ id: x.id || null, name });
     }
     return out;
@@ -586,6 +657,7 @@
     openSuggest(prodSuggest);
   }
 
+  // --- items list ---
   function updateItemsUI() {
     itemsStat.textContent = `Позиции: ${items.length}`;
     if (items.length === 0) {
@@ -613,6 +685,7 @@
     });
   }
 
+  // input formatting
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
       moneyAmount.value = formatSpacesDigits(moneyAmount.value);
@@ -624,7 +697,13 @@
       expManual.value = formatSpacesDigits(expManual.value);
     });
   }
+  if (expOtherAmount) {
+    expOtherAmount.addEventListener("input", () => {
+      expOtherAmount.value = formatSpacesDigits(expOtherAmount.value);
+    });
+  }
 
+  // events
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
@@ -634,7 +713,7 @@
       resetDebtUI();
       return;
     }
-    if (mode === "expense") return; // там не грузим контрагентов
+    if (mode === "expenses") return; // расходы не грузят контрагентов
     try {
       await loadCounterpartiesByTag(managerTag);
     } catch (e) {
@@ -684,7 +763,7 @@
     items.push({
       product_id: pid,
       product_name: name,
-      name: name,              // совместимость (бот читает name)
+      name: name,   // совместимость с ботом
       qty: qty,
       unit: unit
     });
@@ -702,7 +781,26 @@
     hideMsg();
   });
 
-  // -------- EXPENSE logic --------
+  // -------- EXPENSE: switch type --------
+  function setExpenseView(){
+    const t = expType?.value || "salary";
+    if (t === "salary") {
+      expenseSalaryBlock.style.display = "block";
+      expenseOtherBlock.style.display = "none";
+      noteBlock.style.display = "none";
+    } else {
+      expenseSalaryBlock.style.display = "none";
+      expenseOtherBlock.style.display = "block";
+      noteBlock.style.display = "block";
+    }
+  }
+  expType?.addEventListener("change", () => {
+    hideMsg();
+    setExpenseView();
+  });
+  if (mode === "expenses") setExpenseView();
+
+  // -------- EXPENSE: Salary logic (через API /exp/*) --------
   function expSetZeros(){
     if (exp10) exp10.value = "0";
     if (exp20) exp20.value = "0";
@@ -722,14 +820,21 @@
       const j = await apiRequest(`/exp/summary?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}`, {
         headers: tgHeaders()
       });
-      exp10.value = fmtNumberSpaces(j.truck_10t || 0);
-      exp20.value = fmtNumberSpaces(j.truck_20t || 0);
-      expTotal.value = fmtNumberSpaces(j.orders_total || 0);
-      expSalary.value = fmtNumberSpaces(j.salary_calc || 0);
+
+      // поддержим оба формата ключей (на случай разных версий бэка)
+      const c10 = Number(j.count_10t ?? j.truck_10t ?? 0);
+      const c20 = Number(j.count_20t ?? j.truck_20t ?? 0);
+      const ct  = Number(j.count_total ?? j.orders_total ?? (c10 + c20));
+      const sal = Number(j.salary_calc ?? 0);
+
+      exp10.value = fmtNumberSpaces(c10);
+      exp20.value = fmtNumberSpaces(c20);
+      expTotal.value = fmtNumberSpaces(ct);
+      expSalary.value = fmtNumberSpaces(sal);
       showOk("Расчёт готов ✅");
     }catch(e){
       expSetZeros();
-      showError("Не удалось рассчитать расходы: " + (e?.message || e));
+      showError("Не удалось рассчитать: " + (e?.message || e));
     }
   }
 
@@ -745,12 +850,16 @@
     }
 
     rows.forEach((o, idx) => {
+      const dt = (o.doc_date || "").toString();
+      const cp = (o.counterparty_name || "-").toString();
+      const tr = (o.truck_type || "-").toString();
+      const nt = (o.note || "").toString();
+
       const left = document.createElement("div");
-      const dt = o.doc_date || "";
-      const cp = o.counterparty_name || "-";
-      const tr = o.truck_type || "-";
-      const ic = o.items_count ?? 0;
-      left.innerHTML = `<div><b>${idx+1})</b> ${dt} — <b>${tr}</b></div><div class="muted">${cp} • позиций: ${ic}</div>`;
+      left.innerHTML = `
+        <div><b>${idx+1})</b> ${dt} — <b>${tr}</b></div>
+        <div class="muted">${cp}${nt ? " • " + nt : ""}</div>
+      `;
 
       const row = document.createElement("div");
       row.className = "line";
@@ -761,9 +870,10 @@
       btn.type = "button";
       btn.textContent = "Удалить";
       btn.onclick = async () => {
-        if (!confirm("Удалить заявку из базы?")) return;
+        if (!confirm("Удалить заявку из базы (для перерасчёта)?")) return;
         try{
-          await apiRequest(`/exp/order/${encodeURIComponent(o.uid)}`, {method:"DELETE", headers: tgHeaders()});
+          // наш бэк: POST /exp/delete?uid=...
+          await apiRequest(`/exp/delete?uid=${encodeURIComponent(o.uid)}`, { method:"POST", headers: tgHeaders() });
           showOk("Удалено ✅");
           await loadExpenseSummary();
           await loadExpenseOrders();
@@ -800,27 +910,101 @@
 
   expCalcBtn?.addEventListener("click", loadExpenseSummary);
   expLoadOrdersBtn?.addEventListener("click", loadExpenseOrders);
-  expHideOrdersBtn?.addEventListener("click", () => {
-    expOrdersBox.style.display = "none";
-  });
+  expHideOrdersBtn?.addEventListener("click", () => { expOrdersBox.style.display = "none"; });
 
-  // -------- send order/money --------
-  sendBtn?.addEventListener("click", () => {
+  // -------- send --------
+  sendBtn.addEventListener("click", () => {
     hideMsg();
     const manager = managerSelect.value || "";
     const date = docDate.value || "";
-    const cpName = (cpInput?.value || "").trim();
-    const truck = (truckType?.value || "").trim();
+    const created_at = new Date().toISOString();
 
     if (!manager) return showError("Выбери менеджера.");
     if (!date) return showError("Укажи дату.");
-    if (!cpName) return showError("Выбери/введи контрагента.");
 
-    const submission_id = makeId();
-    const created_at = new Date().toISOString();
-    const commentText = (note?.value || "").trim();
+    // EXPENSES
+    if (mode === "expenses") {
+      const t = expType?.value || "salary";
 
+      if (t === "salary") {
+        const month = expMonth.value || "";
+        if (!month) return showError("Выбери месяц.");
+
+        const manualDigits = (expManual.value || "").replace(/\s+/g, "");
+        const manual = Number(manualDigits || 0);
+
+        // берём по расчёту из поля
+        const calcDigits = (expSalary.value || "0").replace(/\s+/g, "");
+        const calc = Number(calcDigits || 0);
+
+        const amount = manual > 0 ? Math.trunc(manual) : Math.trunc(calc);
+        if (!amount || amount <= 0) return showError("Сумма 0. Нажми 'Рассчитать' или введи сумму вручную.");
+
+        const payload = {
+          type: "expense",
+          kind: "expense",
+          submission_id: makeId(),
+          expense_type: "ЗП",
+          manager_name: manager,
+          doc_date: date,
+          month: month,
+          // показатели (для отчётности)
+          count_10t: Number((exp10.value || "0").replace(/\s+/g,"") || 0),
+          count_20t: Number((exp20.value || "0").replace(/\s+/g,"") || 0),
+          count_total: Number((expTotal.value || "0").replace(/\s+/g,"") || 0),
+          salary_calc: Math.trunc(calc),
+          amount: amount,
+          note: "",
+          created_at
+        };
+
+        if (tg) {
+          tg.sendData(JSON.stringify(payload));
+          tg.close();
+        } else {
+          console.log(payload);
+          showOk("sendData недоступен (не Telegram). Смотри console.");
+        }
+        return;
+      }
+
+      // OTHER expense
+      const article = (expArticle.value || "").trim();
+      const amountDigits = (expOtherAmount.value || "").replace(/\s+/g, "");
+      const amount = Number(amountDigits || 0);
+      const commentText = (note.value || "").trim();
+
+      if (!article) return showError("Укажи статью расхода.");
+      if (!amount || amount <= 0) return showError("Укажи сумму расхода.");
+
+      const payload = {
+        type: "expense",
+        kind: "expense",
+        submission_id: makeId(),
+        expense_type: "Другое",
+        manager_name: manager, // можно оставить менеджера для привязки
+        doc_date: date,
+        article: article,
+        amount: Math.trunc(amount),
+        note: commentText,
+        created_at
+      };
+
+      if (tg) {
+        tg.sendData(JSON.stringify(payload));
+        tg.close();
+      } else {
+        console.log(payload);
+        showOk("sendData недоступен (не Telegram). Смотри console.");
+      }
+      return;
+    }
+
+    // MONEY
     if (mode === "money") {
+      const cpName = (cpInput.value || "").trim();
+      if (!cpName) return showError("Выбери/введи контрагента.");
+
       const cpId = (cpInput.dataset.id || "").trim();
       if (!cpId) return showError("Выбери контрагента ИМЕННО из списка (чтобы подтянуть долг).");
 
@@ -831,11 +1015,12 @@
 
       const debt_before = Math.trunc(currentDebt);
       const debt_after = Math.max(0, Math.trunc(currentDebt - amount));
+      const commentText = (note.value || "").trim();
 
       const payload = {
         type: "money",
         kind: "money",
-        submission_id,
+        submission_id: makeId(),
         manager_name: manager,
         doc_date: date,
         counterparty_id: cpId,
@@ -858,14 +1043,19 @@
       return;
     }
 
-    // order
+    // ORDER
+    const cpName = (cpInput.value || "").trim();
+    const truck = (truckType.value || "").trim();
+    const commentText = (note.value || "").trim();
+
+    if (!cpName) return showError("Выбери/введи контрагента.");
     if (!items.length) return showError("Добавь хотя бы 1 позицию.");
     if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
     const payload = {
       type: "order",
       kind: "order",
-      submission_id,
+      submission_id: makeId(),
       manager_name: manager,
       doc_date: date,
       counterparty_id: cpInput.dataset.id || null,
@@ -890,7 +1080,7 @@
   loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
   updateItemsUI();
   if (mode === "money") resetDebtUI();
-  if (mode === "expense") expSetZeros();
+  if (mode === "expenses") expSetZeros();
 </script>
 </body>
 </html>
