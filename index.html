@@ -163,7 +163,6 @@
       </div>
     </div>
 
-    <!-- EXPENSE TYPE SELECT (виды расходов) -->
     <div id="expenseTypeBlock" style="display:none">
       <label style="margin-top:12px">Вид расхода</label>
       <select id="expType">
@@ -173,7 +172,6 @@
       <div class="hint">ЗП — считает по заявкам (10т=1500, 20т=2500). Другое — ручной расход.</div>
     </div>
 
-    <!-- Контрагент (скрываем в expense) -->
     <div id="cpBlock">
       <label>Контрагент</label>
       <div class="suggest-wrap">
@@ -240,7 +238,6 @@
       <div class="hint" id="debtHint">Выбери контрагента из списка — долг подтянется автоматически.</div>
     </div>
 
-    <!-- EXPENSE: Salary (ZP) -->
     <div id="expenseSalaryBlock" style="display:none">
       <div class="row" style="margin-top:12px">
         <div>
@@ -294,7 +291,6 @@
       <div class="hint">Нажми “Отправить в бот” — уйдёт расход “ЗП” с суммой (ручной если заполнена, иначе по расчёту).</div>
     </div>
 
-    <!-- EXPENSE: Other -->
     <div id="expenseOtherBlock" style="display:none">
       <label style="margin-top:12px">Статья расхода</label>
       <input id="expArticle" type="text" placeholder="например: аренда / бензин / прочее">
@@ -326,14 +322,17 @@
     window.addEventListener('orientationchange', set);
   })();
 
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
+  const tg = window.Telegram?.WebApp || null;
+  if (tg) {
+    try { tg.ready(); } catch(e) {}
+    try { tg.expand(); } catch(e) {}
+  }
 
   const API_BASE = "https://api.stroybote.ru";
 
   const params = new URLSearchParams(location.search);
   const modeRaw = (params.get("mode") || "order").toLowerCase();
-  const mode = (modeRaw.startsWith("exp") ? "expenses" : modeRaw); // order | money | expenses
+  const mode = (modeRaw.startsWith("exp") ? "expenses" : modeRaw);
 
   const titleEl = document.getElementById("title");
   const managerSelect = document.getElementById("managerSelect");
@@ -387,7 +386,6 @@
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
-  // -------- mode setup --------
   function setSendButtonText(){
     if (mode === "money") sendBtn.textContent = "Отправить оплату";
     else if (mode === "expenses") sendBtn.textContent = "Отправить расход";
@@ -407,11 +405,11 @@
     titleEl.textContent = "Расходы";
     orderBlock.style.display = "none";
     moneyBlock.style.display = "none";
-    cpBlock.style.display = "none";      // расходы без контрагента
+    cpBlock.style.display = "none";
     expenseTypeBlock.style.display = "block";
     expenseSalaryBlock.style.display = "block";
     expenseOtherBlock.style.display = "none";
-    noteBlock.style.display = "none";    // включим только для "Другое"
+    noteBlock.style.display = "none";
   } else {
     titleEl.textContent = "Заявка";
     orderBlock.style.display = "block";
@@ -424,7 +422,6 @@
   }
   setSendButtonText();
 
-  // date today
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth()+1).padStart(2,'0');
@@ -432,12 +429,10 @@
   docDate.value = `${yyyy}-${mm}-${dd}`;
   if (expMonth) expMonth.value = `${yyyy}-${mm}`;
 
-  // state
   let managerTag = "";
   let counterparties = [];
   let items = [];
 
-  // money state
   let currentDebt = 0;
   let currentDebtLoaded = false;
 
@@ -456,24 +451,48 @@
   function openSuggest(box){ box.style.display = "block"; }
   function closeSuggest(box){ box.style.display = "none"; box.innerHTML=""; }
 
+  function getInitData(){
+    try {
+      return window.Telegram?.WebApp?.initData || "";
+    } catch(e) {
+      return "";
+    }
+  }
+
   function tgHeaders(){
+    const initData = getInitData();
     const h = {};
-    // ВАЖНО: сервер ждёт именно этот заголовок
-    if (tg?.initData) h["X-Telegram-InitData"] = tg.initData;
+    if (initData) {
+      h["X-Telegram-InitData"] = initData;
+      h["X-TG-INITDATA"] = initData;
+    }
     return h;
   }
 
-  // --- fetch helper (с таймаутом) ---
+  function appendInitDataToPath(path){
+    const initData = getInitData();
+    if (!initData) return path;
+    const sep = path.includes("?") ? "&" : "?";
+    return `${path}${sep}initData=${encodeURIComponent(initData)}`;
+  }
+
   async function apiRequest(path, {method="GET", headers={}, body=null, timeoutMs=15000} = {}){
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), timeoutMs);
     try{
-      const opts = { method, headers: {...headers}, signal: ctrl.signal };
+      const finalPath = path.startsWith("/exp/") ? appendInitDataToPath(path) : path;
+      const opts = {
+        method,
+        headers: {...headers, ...(path.startsWith("/exp/") ? tgHeaders() : {})},
+        signal: ctrl.signal
+      };
+
       if (body !== null) {
         opts.headers["Content-Type"] = "application/json";
         opts.body = JSON.stringify(body);
       }
-      const r = await fetch(API_BASE + path, opts);
+
+      const r = await fetch(API_BASE + finalPath, opts);
       const j = await r.json().catch(()=> ({}));
       if (!r.ok) throw new Error(j.detail || (r.status + " " + r.statusText));
       return j;
@@ -481,24 +500,23 @@
       clearTimeout(t);
     }
   }
+
   async function apiGet(path, timeoutMs=15000){
-    // обычные /ms/* без заголовков, а /exp/* сами добавят tgHeaders()
     return apiRequest(path, {timeoutMs});
   }
 
-  // --- utils ---
   function formatSpacesDigits(raw) {
     const digits = (raw || "").replace(/\D+/g, "");
     if (!digits) return "";
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
+
   function fmtNumberSpaces(n){
     const x = Number(n || 0);
     if (!x) return "0";
     return String(Math.trunc(x)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 
-  // debt fields
   function resetDebtUI(){
     currentDebt = 0;
     currentDebtLoaded = false;
@@ -506,6 +524,7 @@
     if (debtAfter) debtAfter.value = "—";
     if (debtHint) debtHint.textContent = "Выбери контрагента из списка — долг подтянется автоматически.";
   }
+
   function recomputeDebtAfter(){
     if (!debtAfter) return;
     if (!currentDebtLoaded){
@@ -529,7 +548,6 @@
     return String(Date.now()) + Math.random().toString(16).slice(2);
   }
 
-  // --- managers from tags ---
   async function loadManagers() {
     managerSelect.innerHTML = `<option value="">— загрузка… —</option>`;
     const j = await apiGet(`/ms/managers`);
@@ -546,7 +564,6 @@
     }
   }
 
-  // --- counterparties (by manager tag) ---
   async function loadCounterpartiesByTag(tag) {
     counterparties = [];
     cpInput.value = "";
@@ -614,7 +631,6 @@
     openSuggest(cpSuggest);
   }
 
-  // --- products ---
   let prodDebounce = null;
 
   async function fetchProducts(searchText="") {
@@ -657,7 +673,6 @@
     openSuggest(prodSuggest);
   }
 
-  // --- items list ---
   function updateItemsUI() {
     itemsStat.textContent = `Позиции: ${items.length}`;
     if (items.length === 0) {
@@ -685,7 +700,6 @@
     });
   }
 
-  // input formatting
   if (moneyAmount) {
     moneyAmount.addEventListener("input", () => {
       moneyAmount.value = formatSpacesDigits(moneyAmount.value);
@@ -703,7 +717,6 @@
     });
   }
 
-  // events
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
@@ -713,7 +726,7 @@
       resetDebtUI();
       return;
     }
-    if (mode === "expenses") return; // расходы не грузят контрагентов
+    if (mode === "expenses") return;
     try {
       await loadCounterpartiesByTag(managerTag);
     } catch (e) {
@@ -763,7 +776,7 @@
     items.push({
       product_id: pid,
       product_name: name,
-      name: name,   // совместимость с ботом
+      name: name,
       qty: qty,
       unit: unit
     });
@@ -781,7 +794,6 @@
     hideMsg();
   });
 
-  // -------- EXPENSE: switch type --------
   function setExpenseView(){
     const t = expType?.value || "salary";
     if (t === "salary") {
@@ -794,13 +806,14 @@
       noteBlock.style.display = "block";
     }
   }
+
   expType?.addEventListener("change", () => {
     hideMsg();
     setExpenseView();
   });
+
   if (mode === "expenses") setExpenseView();
 
-  // -------- EXPENSE: Salary logic (через API /exp/*) --------
   function expSetZeros(){
     if (exp10) exp10.value = "0";
     if (exp20) exp20.value = "0";
@@ -817,11 +830,8 @@
     if (!month) return showError("Выбери месяц.");
 
     try{
-      const j = await apiRequest(`/exp/summary?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}`, {
-        headers: tgHeaders()
-      });
+      const j = await apiRequest(`/exp/summary?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}`);
 
-      // поддержим оба формата ключей (на случай разных версий бэка)
       const c10 = Number(j.count_10t ?? j.truck_10t ?? 0);
       const c20 = Number(j.count_20t ?? j.truck_20t ?? 0);
       const ct  = Number(j.count_total ?? j.orders_total ?? (c10 + c20));
@@ -872,8 +882,7 @@
       btn.onclick = async () => {
         if (!confirm("Удалить заявку из базы (для перерасчёта)?")) return;
         try{
-          // наш бэк: POST /exp/delete?uid=...
-          await apiRequest(`/exp/delete?uid=${encodeURIComponent(o.uid)}`, { method:"POST", headers: tgHeaders() });
+          await apiRequest(`/exp/delete?uid=${encodeURIComponent(o.uid)}`, { method:"POST" });
           showOk("Удалено ✅");
           await loadExpenseSummary();
           await loadExpenseOrders();
@@ -897,9 +906,7 @@
     if (!month) return showError("Выбери месяц.");
 
     try{
-      const j = await apiRequest(`/exp/orders?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}&limit=3000`, {
-        headers: tgHeaders()
-      });
+      const j = await apiRequest(`/exp/orders?manager=${encodeURIComponent(m)}&month=${encodeURIComponent(month)}&limit=3000`);
       renderExpenseOrders(j.rows || []);
     }catch(e){
       expOrdersBox.style.display = "none";
@@ -912,7 +919,6 @@
   expLoadOrdersBtn?.addEventListener("click", loadExpenseOrders);
   expHideOrdersBtn?.addEventListener("click", () => { expOrdersBox.style.display = "none"; });
 
-  // -------- send --------
   sendBtn.addEventListener("click", () => {
     hideMsg();
     const manager = managerSelect.value || "";
@@ -922,7 +928,6 @@
     if (!manager) return showError("Выбери менеджера.");
     if (!date) return showError("Укажи дату.");
 
-    // EXPENSES
     if (mode === "expenses") {
       const t = expType?.value || "salary";
 
@@ -933,7 +938,6 @@
         const manualDigits = (expManual.value || "").replace(/\s+/g, "");
         const manual = Number(manualDigits || 0);
 
-        // берём по расчёту из поля
         const calcDigits = (expSalary.value || "0").replace(/\s+/g, "");
         const calc = Number(calcDigits || 0);
 
@@ -948,7 +952,6 @@
           manager_name: manager,
           doc_date: date,
           month: month,
-          // показатели (для отчётности)
           count_10t: Number((exp10.value || "0").replace(/\s+/g,"") || 0),
           count_20t: Number((exp20.value || "0").replace(/\s+/g,"") || 0),
           count_total: Number((expTotal.value || "0").replace(/\s+/g,"") || 0),
@@ -968,7 +971,6 @@
         return;
       }
 
-      // OTHER expense
       const article = (expArticle.value || "").trim();
       const amountDigits = (expOtherAmount.value || "").replace(/\s+/g, "");
       const amount = Number(amountDigits || 0);
@@ -982,7 +984,7 @@
         kind: "expense",
         submission_id: makeId(),
         expense_type: "Другое",
-        manager_name: manager, // можно оставить менеджера для привязки
+        manager_name: manager,
         doc_date: date,
         article: article,
         amount: Math.trunc(amount),
@@ -1000,7 +1002,6 @@
       return;
     }
 
-    // MONEY
     if (mode === "money") {
       const cpName = (cpInput.value || "").trim();
       if (!cpName) return showError("Выбери/введи контрагента.");
@@ -1043,7 +1044,6 @@
       return;
     }
 
-    // ORDER
     const cpName = (cpInput.value || "").trim();
     const truck = (truckType.value || "").trim();
     const commentText = (note.value || "").trim();
@@ -1076,7 +1076,6 @@
     }
   });
 
-  // init
   loadManagers().catch(e => showError("Ошибка загрузки менеджеров: " + (e?.message || e)));
   updateItemsUI();
   if (mode === "money") resetDebtUI();
