@@ -15,7 +15,7 @@
       padding-bottom: calc(16px + env(safe-area-inset-bottom));
       overscroll-behavior: contain;
     }
-    .wrap{max-width:760px;margin:0 auto}
+    .wrap{max-width:1100px;margin:0 auto}
     h1{margin:0 0 10px;text-align:center;font-size:22px}
     .card{
       background:linear-gradient(180deg,#0f1a33,#0b1220);
@@ -54,6 +54,24 @@
       background:#0c1630;
       color:#e5e7eb;
       font-weight:700;
+      padding:12px;
+      cursor:pointer;
+      border-radius:14px;
+    }
+    .btnDanger{
+      border:none;
+      background:#ef4444;
+      color:#fff;
+      font-weight:800;
+      padding:12px;
+      cursor:pointer;
+      border-radius:14px;
+    }
+    .btnWarn{
+      border:none;
+      background:#f59e0b;
+      color:#111827;
+      font-weight:800;
       padding:12px;
       cursor:pointer;
       border-radius:14px;
@@ -142,6 +160,108 @@
     }
 
     .sep{height:1px;background:rgba(148,163,184,.12);margin:12px 0}
+
+    .table-wrap{
+      width:100%;
+      overflow:auto;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      margin-top:12px;
+    }
+    .table{
+      min-width:980px;
+    }
+    .thead, .trow{
+      display:grid;
+      grid-template-columns: 300px 130px 160px 160px 150px 110px;
+      gap:0;
+      align-items:center;
+    }
+    .thead{
+      background:#0b1733;
+      font-weight:800;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+    .thead > div,
+    .trow > div{
+      padding:12px 10px;
+      border-bottom:1px solid rgba(148,163,184,.10);
+      white-space:nowrap;
+    }
+    .trow{
+      cursor:pointer;
+    }
+    .trow:hover{
+      background:#0c1a3d;
+    }
+    .status-badge{
+      display:inline-block;
+      min-width:72px;
+      text-align:center;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.18);
+      font-size:12px;
+    }
+    .card-grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .mini{
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      padding:12px;
+      background:#0c1630;
+    }
+    .mini .k{
+      font-size:12px;
+      color:#94a3b8;
+      margin-bottom:6px;
+    }
+    .mini .v{
+      font-size:18px;
+      font-weight:800;
+    }
+    .table2-wrap{
+      width:100%;
+      overflow:auto;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      margin-top:12px;
+    }
+    .table2{
+      min-width:920px;
+    }
+    .thead2, .trow2{
+      display:grid;
+      grid-template-columns: 130px 130px 150px 150px 150px 120px 90px;
+      align-items:center;
+    }
+    .thead2{
+      background:#0b1733;
+      font-weight:800;
+    }
+    .thead2 > div,
+    .trow2 > div{
+      padding:10px;
+      border-bottom:1px solid rgba(148,163,184,.10);
+      white-space:nowrap;
+    }
+    .paybox{
+      margin-top:12px;
+      border:1px solid rgba(148,163,184,.14);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .payline{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(148,163,184,.10);
+    }
+    .payline:last-child{border-bottom:none}
   </style>
 </head>
 <body>
@@ -157,7 +277,7 @@
         </select>
         <div class="hint">Менеджеры подтягиваются автоматически из тегов.</div>
       </div>
-      <div>
+      <div id="docDateWrap">
         <label>Дата</label>
         <input id="docDate" type="date">
       </div>
@@ -301,6 +421,101 @@
       <div class="hint">Комментарий можно добавить ниже.</div>
     </div>
 
+    <div id="receivablesBlock" style="display:none">
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Показать</label>
+          <select id="debtFilter">
+            <option value="all" selected>Все</option>
+            <option value="overdue">Только с просрочкой</option>
+          </select>
+        </div>
+        <div>
+          <label>Действие</label>
+          <button class="btn2" id="debtsRefreshBtn" type="button">Обновить список</button>
+        </div>
+      </div>
+
+      <div class="hint">Отсрочка сейчас считается как 7 дней от даты отгрузки.</div>
+
+      <div class="table-wrap">
+        <div class="table">
+          <div class="thead">
+            <div>Контрагент</div>
+            <div>Менеджер</div>
+            <div>Общий долг</div>
+            <div>Просрочено</div>
+            <div>Макс просрочка</div>
+            <div>Статус</div>
+          </div>
+          <div id="debtsTableBody"></div>
+        </div>
+      </div>
+
+      <div id="debtCardWrap" style="display:none; margin-top:14px;">
+        <div class="sep"></div>
+        <div class="row" style="margin-top:10px">
+          <div>
+            <div class="hint">Карточка контрагента</div>
+            <h2 id="debtCardTitle" style="margin:6px 0 0;font-size:22px;"></h2>
+          </div>
+          <div>
+            <div class="row" style="grid-template-columns:1fr 1fr; gap:10px;">
+              <button class="btnWarn" id="blockBtn" type="button">⛔ Блок</button>
+              <button class="btn2" id="unblockBtn" type="button">✅ Разблок</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <div class="mini">
+            <div class="k">Менеджер</div>
+            <div class="v" id="cardManager">-</div>
+          </div>
+          <div class="mini">
+            <div class="k">Общий долг</div>
+            <div class="v" id="cardTotalDebt">0</div>
+          </div>
+          <div class="mini">
+            <div class="k">Просрочено</div>
+            <div class="v" id="cardOverdueDebt">0</div>
+          </div>
+          <div class="mini">
+            <div class="k">Макс просрочка</div>
+            <div class="v" id="cardMaxOverdue">0</div>
+          </div>
+          <div class="mini">
+            <div class="k">Статус</div>
+            <div class="v" id="cardStatus">-</div>
+          </div>
+          <div class="mini">
+            <div class="k">Причина блока</div>
+            <div class="v" id="cardBlockReason" style="font-size:14px;">-</div>
+          </div>
+        </div>
+
+        <div class="table2-wrap">
+          <div class="table2">
+            <div class="thead2">
+              <div>Дата</div>
+              <div>Срок оплаты</div>
+              <div>Сумма</div>
+              <div>Оплачено</div>
+              <div>Остаток</div>
+              <div>Просрочка</div>
+              <div>Статус</div>
+            </div>
+            <div id="debtCardShipments"></div>
+          </div>
+        </div>
+
+        <div class="paybox">
+          <div class="payline"><b>История оплат</b></div>
+          <div id="debtCardPayments"></div>
+        </div>
+      </div>
+    </div>
+
     <div id="noteBlock">
       <label>Комментарий (не обязательно)</label>
       <textarea id="note" placeholder="комментарий…"></textarea>
@@ -332,11 +547,14 @@
 
   const params = new URLSearchParams(location.search);
   const modeRaw = (params.get("mode") || "order").toLowerCase();
-  const mode = (modeRaw.startsWith("exp") ? "expenses" : modeRaw);
+  let mode = modeRaw;
+  if (modeRaw.startsWith("exp")) mode = "expenses";
+  if (modeRaw.startsWith("rec")) mode = "receivables";
 
   const titleEl = document.getElementById("title");
   const managerSelect = document.getElementById("managerSelect");
   const docDate = document.getElementById("docDate");
+  const docDateWrap = document.getElementById("docDateWrap");
 
   const expenseTypeBlock = document.getElementById("expenseTypeBlock");
   const expType = document.getElementById("expType");
@@ -381,14 +599,34 @@
   const expArticle = document.getElementById("expArticle");
   const expOtherAmount = document.getElementById("expOtherAmount");
 
+  const receivablesBlock = document.getElementById("receivablesBlock");
+  const debtFilter = document.getElementById("debtFilter");
+  const debtsRefreshBtn = document.getElementById("debtsRefreshBtn");
+  const debtsTableBody = document.getElementById("debtsTableBody");
+  const debtCardWrap = document.getElementById("debtCardWrap");
+  const debtCardTitle = document.getElementById("debtCardTitle");
+  const cardManager = document.getElementById("cardManager");
+  const cardTotalDebt = document.getElementById("cardTotalDebt");
+  const cardOverdueDebt = document.getElementById("cardOverdueDebt");
+  const cardMaxOverdue = document.getElementById("cardMaxOverdue");
+  const cardStatus = document.getElementById("cardStatus");
+  const cardBlockReason = document.getElementById("cardBlockReason");
+  const debtCardShipments = document.getElementById("debtCardShipments");
+  const debtCardPayments = document.getElementById("debtCardPayments");
+  const blockBtn = document.getElementById("blockBtn");
+  const unblockBtn = document.getElementById("unblockBtn");
+
   const noteBlock = document.getElementById("noteBlock");
   const note = document.getElementById("note");
   const sendBtn = document.getElementById("sendBtn");
   const msg = document.getElementById("msg");
 
+  let selectedDebtCounterparty = null;
+
   function setSendButtonText(){
     if (mode === "money") sendBtn.textContent = "Отправить оплату";
     else if (mode === "expenses") sendBtn.textContent = "Отправить расход";
+    else if (mode === "receivables") sendBtn.textContent = "Не используется";
     else sendBtn.textContent = "Отправить заявку";
   }
 
@@ -399,6 +637,7 @@
     expenseTypeBlock.style.display = "none";
     expenseSalaryBlock.style.display = "none";
     expenseOtherBlock.style.display = "none";
+    receivablesBlock.style.display = "none";
     cpBlock.style.display = "block";
     noteBlock.style.display = "block";
   } else if (mode === "expenses") {
@@ -409,7 +648,20 @@
     expenseTypeBlock.style.display = "block";
     expenseSalaryBlock.style.display = "block";
     expenseOtherBlock.style.display = "none";
+    receivablesBlock.style.display = "none";
     noteBlock.style.display = "none";
+  } else if (mode === "receivables") {
+    titleEl.textContent = "Дебиторка";
+    orderBlock.style.display = "none";
+    moneyBlock.style.display = "none";
+    cpBlock.style.display = "none";
+    expenseTypeBlock.style.display = "none";
+    expenseSalaryBlock.style.display = "none";
+    expenseOtherBlock.style.display = "none";
+    receivablesBlock.style.display = "block";
+    noteBlock.style.display = "none";
+    sendBtn.style.display = "none";
+    if (docDateWrap) docDateWrap.style.display = "none";
   } else {
     titleEl.textContent = "Заявка";
     orderBlock.style.display = "block";
@@ -417,6 +669,7 @@
     expenseTypeBlock.style.display = "none";
     expenseSalaryBlock.style.display = "none";
     expenseOtherBlock.style.display = "none";
+    receivablesBlock.style.display = "none";
     cpBlock.style.display = "block";
     noteBlock.style.display = "block";
   }
@@ -552,7 +805,10 @@
     managerSelect.innerHTML = `<option value="">— загрузка… —</option>`;
     const j = await apiGet(`/ms/managers`);
     const rows = j.rows || [];
-    managerSelect.innerHTML = `<option value="">— выбери —</option>`;
+    managerSelect.innerHTML = mode === "receivables"
+      ? `<option value="">Все менеджеры</option>`
+      : `<option value="">— выбери —</option>`;
+
     for (const x of rows) {
       const tag = (x.tag ?? x.name ?? x.manager ?? "").toString().trim();
       const c = Number(x.count ?? x.cnt ?? 0);
@@ -568,6 +824,8 @@
     counterparties = [];
     cpInput.value = "";
     cpInput.dataset.id = "";
+    cpInput.dataset.blocked = "";
+    cpInput.dataset.blockedReason = "";
     cpHint.textContent = "Загружаю контрагентов…";
     resetDebtUI();
 
@@ -575,7 +833,12 @@
     const rows = j.rows || [];
     counterparties = rows
       .filter(x => x && x.name)
-      .map(x => ({id: x.id || "", name: x.name}));
+      .map(x => ({
+        id: x.id || "",
+        name: x.name,
+        blocked: !!x.blocked,
+        blocked_reason: x.blocked_reason || "",
+      }));
 
     cpHint.textContent = `Загружено контрагентов: ${counterparties.length}`;
   }
@@ -608,11 +871,17 @@
     for (const x of top) {
       const div = document.createElement("div");
       div.className = "item";
-      div.textContent = x.name;
+      div.textContent = x.blocked ? `⛔ ${x.name}` : x.name;
       div.onclick = async () => {
         cpInput.value = x.name;
         cpInput.dataset.id = x.id || "";
+        cpInput.dataset.blocked = x.blocked ? "1" : "";
+        cpInput.dataset.blockedReason = x.blocked_reason || "";
         closeSuggest(cpSuggest);
+
+        if (x.blocked && mode === "order") {
+          showError(`Контрагент заблокирован директором.${x.blocked_reason ? " Причина: " + x.blocked_reason : ""}`);
+        }
 
         if (mode === "money" && x.id) {
           await loadDebtByCounterpartyId(x.id);
@@ -720,6 +989,12 @@
   managerSelect.addEventListener("change", async () => {
     hideMsg();
     managerTag = managerSelect.value || "";
+
+    if (mode === "receivables") {
+      await loadDebtsSummary();
+      return;
+    }
+
     if (!managerTag) {
       if (cpHint) cpHint.textContent = "Выбери менеджера — и контрагенты подтянутся по его тегу.";
       counterparties = [];
@@ -919,6 +1194,138 @@
   expLoadOrdersBtn?.addEventListener("click", loadExpenseOrders);
   expHideOrdersBtn?.addEventListener("click", () => { expOrdersBox.style.display = "none"; });
 
+  function renderDebtsSummary(rows){
+    debtsTableBody.innerHTML = "";
+    if (!rows.length){
+      debtsTableBody.innerHTML = `<div class="trow"><div class="muted" style="grid-column:1 / -1;">Нет данных</div></div>`;
+      return;
+    }
+
+    rows.forEach((r, idx) => {
+      const row = document.createElement("div");
+      row.className = "trow";
+      row.innerHTML = `
+        <div>${idx+1}. ${r.counterparty_name || "-"}</div>
+        <div>${r.manager_name || "-"}</div>
+        <div>${fmtNumberSpaces(r.total_debt || 0)}</div>
+        <div>${fmtNumberSpaces(r.overdue_debt || 0)}</div>
+        <div>${Number(r.max_overdue_days || 0)} дней</div>
+        <div><span class="status-badge">${r.blocked ? "⛔ блок" : (r.status || "-")}</span></div>
+      `;
+      row.onclick = () => loadDebtCard(r.counterparty_id);
+      debtsTableBody.appendChild(row);
+    });
+  }
+
+  async function loadDebtsSummary(){
+    hideMsg();
+    try{
+      const manager = managerSelect.value || "";
+      const only_overdue = (debtFilter.value === "overdue") ? 1 : 0;
+      const j = await apiGet(`/debts/summary?manager=${encodeURIComponent(manager)}&only_overdue=${only_overdue}`);
+      renderDebtsSummary(j.rows || []);
+      if (!selectedDebtCounterparty) debtCardWrap.style.display = "none";
+    }catch(e){
+      showError("Ошибка загрузки дебиторки: " + (e?.message || e));
+    }
+  }
+
+  function renderDebtCard(card){
+    selectedDebtCounterparty = card.counterparty_id || null;
+    debtCardWrap.style.display = "block";
+
+    debtCardTitle.textContent = card.counterparty_name || "-";
+    cardManager.textContent = card.manager_name || "-";
+    cardTotalDebt.textContent = fmtNumberSpaces(card.total_debt || 0);
+    cardOverdueDebt.textContent = fmtNumberSpaces(card.overdue_debt || 0);
+    cardMaxOverdue.textContent = `${Number(card.max_overdue_days || 0)} дней`;
+    cardStatus.textContent = card.blocked ? "⛔ Блок" : (card.status || "-");
+    cardBlockReason.textContent = card.blocked_reason || "—";
+
+    debtCardShipments.innerHTML = "";
+    (card.shipments || []).forEach(sh => {
+      const row = document.createElement("div");
+      row.className = "trow2";
+      row.innerHTML = `
+        <div>${sh.doc_date || "-"}</div>
+        <div>${sh.due_date || "-"}</div>
+        <div>${fmtNumberSpaces(sh.sum_total || 0)}</div>
+        <div>${fmtNumberSpaces(sh.sum_paid || 0)}</div>
+        <div>${fmtNumberSpaces(sh.sum_left || 0)}</div>
+        <div>${Number(sh.overdue_days || 0)} дней</div>
+        <div>${sh.status === "overdue" ? "🔴" : (sh.status === "closed" ? "✅" : "🟠")}</div>
+      `;
+      debtCardShipments.appendChild(row);
+    });
+
+    if (!(card.shipments || []).length) {
+      debtCardShipments.innerHTML = `<div class="trow2"><div style="grid-column:1 / -1;" class="muted">Нет отгрузок</div></div>`;
+    }
+
+    debtCardPayments.innerHTML = "";
+    (card.payments || []).forEach(p => {
+      const div = document.createElement("div");
+      div.className = "payline";
+      div.innerHTML = `<b>${p.doc_date || "-"}</b> — ${fmtNumberSpaces(p.sum_total || 0)} (${p.entity || ""})`;
+      debtCardPayments.appendChild(div);
+    });
+
+    if (!(card.payments || []).length) {
+      debtCardPayments.innerHTML = `<div class="payline muted">Нет оплат</div>`;
+    }
+  }
+
+  async function loadDebtCard(counterpartyId){
+    hideMsg();
+    try{
+      const j = await apiGet(`/debts/card?counterparty_id=${encodeURIComponent(counterpartyId)}`);
+      renderDebtCard(j);
+    }catch(e){
+      showError("Ошибка карточки контрагента: " + (e?.message || e));
+    }
+  }
+
+  debtsRefreshBtn?.addEventListener("click", loadDebtsSummary);
+  debtFilter?.addEventListener("change", loadDebtsSummary);
+
+  blockBtn?.addEventListener("click", async () => {
+    if (!selectedDebtCounterparty) return;
+    const reason = prompt("Причина блока (не обязательно):", "") || "";
+    try{
+      await apiRequest(`/debts/block`, {
+        method: "POST",
+        body: {
+          counterparty_id: selectedDebtCounterparty,
+          counterparty_name: debtCardTitle.textContent || "-",
+          reason,
+          blocked_by: 0
+        }
+      });
+      showOk("Контрагент заблокирован ✅");
+      await loadDebtsSummary();
+      await loadDebtCard(selectedDebtCounterparty);
+    }catch(e){
+      showError("Ошибка блокировки: " + (e?.message || e));
+    }
+  });
+
+  unblockBtn?.addEventListener("click", async () => {
+    if (!selectedDebtCounterparty) return;
+    try{
+      await apiRequest(`/debts/unblock`, {
+        method: "POST",
+        body: {
+          counterparty_id: selectedDebtCounterparty
+        }
+      });
+      showOk("Контрагент разблокирован ✅");
+      await loadDebtsSummary();
+      await loadDebtCard(selectedDebtCounterparty);
+    }catch(e){
+      showError("Ошибка разблокировки: " + (e?.message || e));
+    }
+  });
+
   sendBtn.addEventListener("click", () => {
     hideMsg();
     const manager = managerSelect.value || "";
@@ -1047,8 +1454,11 @@
     const cpName = (cpInput.value || "").trim();
     const truck = (truckType.value || "").trim();
     const commentText = (note.value || "").trim();
+    const isBlocked = (cpInput.dataset.blocked || "") === "1";
+    const blockedReason = (cpInput.dataset.blockedReason || "").trim();
 
     if (!cpName) return showError("Выбери/введи контрагента.");
+    if (isBlocked) return showError(`Контрагент заблокирован директором.${blockedReason ? " Причина: " + blockedReason : ""}`);
     if (!items.length) return showError("Добавь хотя бы 1 позицию.");
     if (!truck) return showError("Выбери тип фуры (10т или 20т).");
 
@@ -1080,6 +1490,7 @@
   updateItemsUI();
   if (mode === "money") resetDebtUI();
   if (mode === "expenses") expSetZeros();
+  if (mode === "receivables") loadDebtsSummary().catch(e => showError("Ошибка загрузки дебиторки: " + (e?.message || e)));
 </script>
 </body>
 </html>
