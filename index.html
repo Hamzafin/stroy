@@ -58,15 +58,6 @@
       cursor:pointer;
       border-radius:14px;
     }
-    .btnDanger{
-      border:none;
-      background:#ef4444;
-      color:#fff;
-      font-weight:800;
-      padding:12px;
-      cursor:pointer;
-      border-radius:14px;
-    }
     .btnWarn{
       border:none;
       background:#f59e0b;
@@ -79,7 +70,6 @@
     .hint{font-size:12px;color:#94a3b8;margin-top:6px}
     .err{color:#fb7185;font-size:12px;margin-top:10px}
     .ok{color:#34d399;font-size:12px;margin-top:10px}
-
     .suggest-wrap{position:relative}
     .suggest{
       position:absolute; left:0; right:0; top:100%;
@@ -106,7 +96,6 @@
       border-radius:999px;
       font-size:12px;color:#cbd5e1;
     }
-
     .items{
       margin-top:10px;
       border:1px solid rgba(148,163,184,.14);
@@ -131,7 +120,6 @@
       white-space:nowrap;
     }
     .muted{color:#94a3b8;font-size:12px}
-
     .qty-row{
       display:grid;
       grid-template-columns: 1fr 88px;
@@ -152,17 +140,14 @@
       .qty-row{ grid-template-columns: 1fr 74px; }
       #qtyUnit{ font-size:13px; padding:9px 6px; }
     }
-
     #debtNow, #debtAfter{
       text-align:center;
       font-weight:800;
       letter-spacing:.3px;
     }
-
     .sep{height:1px;background:rgba(148,163,184,.12);margin:12px 0}
     .screen{display:none}
     .screen.active{display:block}
-
     .table-wrap{
       width:100%;
       overflow:auto;
@@ -171,9 +156,7 @@
       border-radius:14px;
       margin-top:12px;
     }
-    .table{
-      min-width:960px;
-    }
+    .table{min-width:960px}
     .thead, .trow{
       display:grid;
       grid-template-columns: 280px 130px 150px 150px 140px 110px;
@@ -193,12 +176,8 @@
       white-space:nowrap;
       font-size:14px;
     }
-    .trow{
-      cursor:pointer;
-    }
-    .trow:hover{
-      background:#0c1a3d;
-    }
+    .trow{cursor:pointer}
+    .trow:hover{background:#0c1a3d}
     .status-badge{
       display:inline-block;
       min-width:72px;
@@ -208,7 +187,6 @@
       border:1px solid rgba(148,163,184,.18);
       font-size:12px;
     }
-
     .card-grid{
       display:grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -230,7 +208,6 @@
       font-size:18px;
       font-weight:800;
     }
-
     .table2-wrap{
       width:100%;
       overflow:auto;
@@ -239,9 +216,7 @@
       border-radius:14px;
       margin-top:12px;
     }
-    .table2{
-      min-width:900px;
-    }
+    .table2{min-width:900px}
     .thead2, .trow2{
       display:grid;
       grid-template-columns: 120px 120px 140px 140px 140px 110px 90px;
@@ -261,7 +236,6 @@
       white-space:nowrap;
       font-size:14px;
     }
-
     .paybox{
       margin-top:12px;
       border:1px solid rgba(148,163,184,.14);
@@ -273,7 +247,6 @@
       border-bottom:1px solid rgba(148,163,184,.10);
     }
     .payline:last-child{border-bottom:none}
-
     .top-actions{
       display:flex;
       gap:10px;
@@ -282,14 +255,9 @@
       margin-top:8px;
       flex-wrap:wrap;
     }
-
     @media (max-width: 720px){
-      .card-grid{
-        grid-template-columns: 1fr;
-      }
-      .row{
-        grid-template-columns:1fr;
-      }
+      .card-grid{grid-template-columns: 1fr}
+      .row{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -460,6 +428,19 @@
               <option value="overdue">Только с просрочкой</option>
             </select>
           </div>
+          <div>
+            <label>Сортировка</label>
+            <select id="debtSort">
+              <option value="default" selected>По умолчанию</option>
+              <option value="max_overdue">По макс просрочке</option>
+              <option value="total_debt">По общему долгу</option>
+              <option value="overdue_debt">По просроченной сумме</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <div></div>
           <div>
             <label>Действие</label>
             <button class="btn2" id="debtsRefreshBtn" type="button">Обновить список</button>
@@ -637,6 +618,7 @@
   const receivablesListScreen = document.getElementById("receivablesListScreen");
   const receivablesCardScreen = document.getElementById("receivablesCardScreen");
   const debtFilter = document.getElementById("debtFilter");
+  const debtSort = document.getElementById("debtSort");
   const debtsRefreshBtn = document.getElementById("debtsRefreshBtn");
   const debtsTableBody = document.getElementById("debtsTableBody");
   const backToDebtsBtn = document.getElementById("backToDebtsBtn");
@@ -1263,12 +1245,13 @@
     try{
       const manager = managerSelect.value || "";
       const only_overdue = (debtFilter.value === "overdue") ? 1 : 0;
+      const sort_by = debtSort.value || "default";
       const refresh = forceRefresh ? 1 : 0;
-      const j = await apiGet(`/debts/summary?manager=${encodeURIComponent(manager)}&only_overdue=${only_overdue}&refresh=${refresh}`);
+      const j = await apiGet(`/debts/summary?manager=${encodeURIComponent(manager)}&only_overdue=${only_overdue}&sort_by=${encodeURIComponent(sort_by)}&refresh=${refresh}`);
       renderDebtsSummary(j.rows || []);
       selectedDebtCounterparty = null;
       setScreen(receivablesListScreen);
-      showOk(forceRefresh ? "Список обновлён ✅" : "Дебиторка загружена ✅");
+      if (forceRefresh) showOk("Список обновлён ✅");
     }catch(e){
       showError("Ошибка загрузки дебиторки: " + (e?.message || e));
     }
@@ -1331,6 +1314,7 @@
 
   debtsRefreshBtn?.addEventListener("click", () => loadDebtsSummary(true));
   debtFilter?.addEventListener("change", () => loadDebtsSummary(false));
+  debtSort?.addEventListener("change", () => loadDebtsSummary(false));
   backToDebtsBtn?.addEventListener("click", () => setScreen(receivablesListScreen));
 
   blockBtn?.addEventListener("click", async () => {
