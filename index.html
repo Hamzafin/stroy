@@ -182,13 +182,29 @@
     .trow{cursor:pointer}
     .trow:hover{background:#0c1a3d}
     .status-badge{
-      display:inline-block;
-      min-width:62px;
-      text-align:center;
-      padding:3px 6px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:28px;
+      height:22px;
+      padding:0 6px;
       border-radius:999px;
       border:1px solid rgba(148,163,184,.18);
       font-size:11px;
+      line-height:1;
+    }
+    .status-dot{
+      width:11px;
+      height:11px;
+      border-radius:50%;
+      display:inline-block;
+      box-shadow:0 0 10px rgba(255,255,255,.12) inset;
+    }
+    .status-dot.blocked{
+      background:#ef4444;
+    }
+    .status-dot.normal{
+      background:#f59e0b;
     }
 
     .card-grid{
@@ -221,10 +237,12 @@
       border-radius:14px;
       margin-top:12px;
     }
-    .table2{min-width:900px}
+    .table2{
+      min-width:920px;
+    }
     .thead2, .trow2{
       display:grid;
-      grid-template-columns: 120px 120px 140px 140px 140px 110px 90px;
+      grid-template-columns: 110px 130px 130px 130px 110px 120px 90px;
       align-items:center;
     }
     .thead2{
@@ -517,12 +535,12 @@
         <div class="table2-wrap">
           <div class="table2">
             <div class="thead2">
-              <div>Дата</div>
-              <div>Срок оплаты</div>
+              <div>Просрочка</div>
               <div>Сумма</div>
               <div>Оплачено</div>
               <div>Остаток</div>
-              <div>Просрочка</div>
+              <div>Дата</div>
+              <div>Срок оплаты</div>
               <div>Статус</div>
             </div>
             <div id="debtCardShipments"></div>
@@ -677,6 +695,28 @@
     else if (mode === "expenses") sendBtn.textContent = "Отправить расход";
     else if (mode === "receivables") sendBtn.textContent = "Не используется";
     else sendBtn.textContent = "Отправить заявку";
+  }
+
+  function fmtDateRu(s){
+    if (!s) return "-";
+    const str = String(s).trim();
+    const m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+    return str;
+  }
+
+  function parseDateSafe(s){
+    if (!s) return 0;
+    const str = String(s).trim().slice(0, 10);
+    const t = Date.parse(str);
+    return Number.isNaN(t) ? 0 : t;
+  }
+
+  function makeStatusBadge(isBlocked, rawStatus){
+    if (isBlocked) {
+      return `<span class="status-badge"><span class="status-dot blocked"></span></span>`;
+    }
+    return `<span class="status-badge"><span class="status-dot normal"></span></span>`;
   }
 
   if (mode === "money") {
@@ -1163,7 +1203,7 @@
     }
 
     rows.forEach((o, idx) => {
-      const dt = (o.doc_date || "").toString();
+      const dt = fmtDateRu(o.doc_date || "");
       const cp = (o.counterparty_name || "-").toString();
       const tr = (o.truck_type || "-").toString();
       const nt = (o.note || "").toString();
@@ -1238,7 +1278,7 @@
         <div>${fmtNumberSpaces(r.overdue_debt || 0)}</div>
         <div>${fmtNumberSpaces(r.total_debt || 0)}</div>
         <div>${r.manager_name || "-"}</div>
-        <div><span class="status-badge">${r.blocked ? "⛔" : (r.status || "-")}</span></div>
+        <div>${makeStatusBadge(!!r.blocked, r.status || "-")}</div>
       `;
       row.onclick = () => loadDebtCard(r.counterparty_id);
       debtsTableBody.appendChild(row);
@@ -1271,38 +1311,50 @@
     cardTotalDebt.textContent = fmtNumberSpaces(card.total_debt || 0);
     cardOverdueDebt.textContent = fmtNumberSpaces(card.overdue_debt || 0);
     cardMaxOverdue.textContent = `${Number(card.max_overdue_days || 0)} дней`;
-    cardStatus.textContent = card.blocked ? "⛔ Блок" : (card.status || "-");
+    cardStatus.textContent = card.blocked ? "⛔ Блок" : "🟡 Активен";
     cardBlockReason.textContent = card.blocked_reason || "—";
 
+    const shipments = [...(card.shipments || [])].sort((a, b) => {
+      const od = Number(b.overdue_days || 0) - Number(a.overdue_days || 0);
+      if (od !== 0) return od;
+      const dl = Number(b.sum_left || 0) - Number(a.sum_left || 0);
+      if (dl !== 0) return dl;
+      return parseDateSafe(a.doc_date) - parseDateSafe(b.doc_date);
+    });
+
     debtCardShipments.innerHTML = "";
-    (card.shipments || []).forEach(sh => {
+    shipments.forEach(sh => {
       const row = document.createElement("div");
       row.className = "trow2";
       row.innerHTML = `
-        <div>${sh.doc_date || "-"}</div>
-        <div>${sh.due_date || "-"}</div>
+        <div>${Number(sh.overdue_days || 0)} дн</div>
         <div>${fmtNumberSpaces(sh.sum_total || 0)}</div>
         <div>${fmtNumberSpaces(sh.sum_paid || 0)}</div>
         <div>${fmtNumberSpaces(sh.sum_left || 0)}</div>
-        <div>${Number(sh.overdue_days || 0)} дней</div>
-        <div>${sh.status === "overdue" ? "🔴" : (sh.status === "closed" ? "✅" : "🟠")}</div>
+        <div>${fmtDateRu(sh.doc_date || "-")}</div>
+        <div>${fmtDateRu(sh.due_date || "-")}</div>
+        <div>${makeStatusBadge(false, sh.status || "-")}</div>
       `;
       debtCardShipments.appendChild(row);
     });
 
-    if (!(card.shipments || []).length) {
+    if (!shipments.length) {
       debtCardShipments.innerHTML = `<div class="trow2"><div style="grid-column:1 / -1;" class="muted">Нет отгрузок</div></div>`;
     }
 
+    const payments = [...(card.payments || [])].sort((a, b) => {
+      return parseDateSafe(b.doc_date) - parseDateSafe(a.doc_date);
+    });
+
     debtCardPayments.innerHTML = "";
-    (card.payments || []).forEach(p => {
+    payments.forEach(p => {
       const div = document.createElement("div");
       div.className = "payline";
-      div.innerHTML = `<b>${p.doc_date || "-"}</b> — ${fmtNumberSpaces(p.sum_total || 0)} (${p.entity || ""})`;
+      div.innerHTML = `<b>${fmtDateRu(p.doc_date || "-")}</b> — ${fmtNumberSpaces(p.sum_total || 0)} (${p.entity || ""})`;
       debtCardPayments.appendChild(div);
     });
 
-    if (!(card.payments || []).length) {
+    if (!payments.length) {
       debtCardPayments.innerHTML = `<div class="payline muted">Нет оплат</div>`;
     }
   }
