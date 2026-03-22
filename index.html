@@ -199,12 +199,33 @@
       border-radius:50%;
       display:inline-block;
       box-shadow:0 0 10px rgba(255,255,255,.12) inset;
+      position:relative;
     }
     .status-dot.blocked{
       background:#ef4444;
     }
+    .status-dot.blocked::after{
+      content:"";
+      position:absolute;
+      left:2px;
+      right:2px;
+      top:50%;
+      height:2px;
+      background:#fff;
+      transform:translateY(-50%);
+      border-radius:2px;
+    }
     .status-dot.normal{
       background:#f59e0b;
+    }
+    .status-dot.paid{
+      width:auto;
+      height:auto;
+      background:transparent;
+      box-shadow:none;
+      color:#22c55e;
+      font-size:14px;
+      line-height:1;
     }
 
     .card-grid{
@@ -242,7 +263,7 @@
     }
     .thead2, .trow2{
       display:grid;
-      grid-template-columns: 110px 130px 130px 130px 110px 120px 90px;
+      grid-template-columns: 120px 120px 130px 130px 130px 110px 90px;
       align-items:center;
     }
     .thead2{
@@ -535,12 +556,12 @@
         <div class="table2-wrap">
           <div class="table2">
             <div class="thead2">
-              <div>Просрочка</div>
+              <div>Дата</div>
+              <div>Срок оплаты</div>
               <div>Сумма</div>
               <div>Оплачено</div>
               <div>Остаток</div>
-              <div>Дата</div>
-              <div>Срок оплаты</div>
+              <div>Просрочка</div>
               <div>Статус</div>
             </div>
             <div id="debtCardShipments"></div>
@@ -715,6 +736,13 @@
   function makeStatusBadge(isBlocked, rawStatus){
     if (isBlocked) {
       return `<span class="status-badge"><span class="status-dot blocked"></span></span>`;
+    }
+    return `<span class="status-badge"><span class="status-dot normal"></span></span>`;
+  }
+
+  function makeShipmentStatusBadge(status){
+    if (status === "closed") {
+      return `<span class="status-badge"><span class="status-dot paid">✅</span></span>`;
     }
     return `<span class="status-badge"><span class="status-dot normal"></span></span>`;
   }
@@ -1327,13 +1355,13 @@
       const row = document.createElement("div");
       row.className = "trow2";
       row.innerHTML = `
-        <div>${Number(sh.overdue_days || 0)} дн</div>
+        <div>${fmtDateRu(sh.doc_date || "-")}</div>
+        <div>${fmtDateRu(sh.due_date || "-")}</div>
         <div>${fmtNumberSpaces(sh.sum_total || 0)}</div>
         <div>${fmtNumberSpaces(sh.sum_paid || 0)}</div>
         <div>${fmtNumberSpaces(sh.sum_left || 0)}</div>
-        <div>${fmtDateRu(sh.doc_date || "-")}</div>
-        <div>${fmtDateRu(sh.due_date || "-")}</div>
-        <div>${makeStatusBadge(false, sh.status || "-")}</div>
+        <div>${Number(sh.overdue_days || 0)} дн</div>
+        <div>${makeShipmentStatusBadge(sh.status || "-")}</div>
       `;
       debtCardShipments.appendChild(row);
     });
