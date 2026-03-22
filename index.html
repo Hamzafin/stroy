@@ -148,6 +148,7 @@
     .sep{height:1px;background:rgba(148,163,184,.12);margin:12px 0}
     .screen{display:none}
     .screen.active{display:block}
+
     .table-wrap{
       width:100%;
       overflow:auto;
@@ -156,10 +157,12 @@
       border-radius:14px;
       margin-top:12px;
     }
-    .table{min-width:960px}
+    .table{
+      min-width:760px;
+    }
     .thead, .trow{
       display:grid;
-      grid-template-columns: 280px 130px 150px 150px 140px 110px;
+      grid-template-columns: 250px 110px 120px 120px 110px 90px;
       align-items:center;
     }
     .thead{
@@ -171,22 +174,23 @@
     }
     .thead > div,
     .trow > div{
-      padding:10px 8px;
+      padding:8px 6px;
       border-bottom:1px solid rgba(148,163,184,.10);
       white-space:nowrap;
-      font-size:14px;
+      font-size:12px;
     }
     .trow{cursor:pointer}
     .trow:hover{background:#0c1a3d}
     .status-badge{
       display:inline-block;
-      min-width:72px;
+      min-width:62px;
       text-align:center;
-      padding:4px 8px;
+      padding:3px 6px;
       border-radius:999px;
       border:1px solid rgba(148,163,184,.18);
-      font-size:12px;
+      font-size:11px;
     }
+
     .card-grid{
       display:grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -208,6 +212,7 @@
       font-size:18px;
       font-weight:800;
     }
+
     .table2-wrap{
       width:100%;
       overflow:auto;
@@ -453,10 +458,10 @@
           <div class="table">
             <div class="thead">
               <div>Контрагент</div>
-              <div>Менеджер</div>
-              <div>Общий долг</div>
-              <div>Просрочено</div>
               <div>Макс просрочка</div>
+              <div>Просрочено</div>
+              <div>Общий долг</div>
+              <div>Менеджер</div>
               <div>Статус</div>
             </div>
             <div id="debtsTableBody"></div>
@@ -1229,11 +1234,11 @@
       row.className = "trow";
       row.innerHTML = `
         <div>${idx+1}. ${r.counterparty_name || "-"}</div>
-        <div>${r.manager_name || "-"}</div>
-        <div>${fmtNumberSpaces(r.total_debt || 0)}</div>
+        <div>${Number(r.max_overdue_days || 0)} дн</div>
         <div>${fmtNumberSpaces(r.overdue_debt || 0)}</div>
-        <div>${Number(r.max_overdue_days || 0)} дней</div>
-        <div><span class="status-badge">${r.blocked ? "⛔ блок" : (r.status || "-")}</span></div>
+        <div>${fmtNumberSpaces(r.total_debt || 0)}</div>
+        <div>${r.manager_name || "-"}</div>
+        <div><span class="status-badge">${r.blocked ? "⛔" : (r.status || "-")}</span></div>
       `;
       row.onclick = () => loadDebtCard(r.counterparty_id);
       debtsTableBody.appendChild(row);
